@@ -31,6 +31,7 @@ import org.xml.sax.SAXException;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.LauncherActivity;
 import android.app.ProgressDialog;
 import android.app.AlertDialog.Builder;
 import android.content.ContentResolver;
@@ -1977,7 +1978,6 @@ public class Filex extends Activity {
 	 * get Album info
 	 *  
 	 *********************************************/
-    static Bitmap[] albumImages = null;
     public void getAlbums(boolean force){
     	/*
     	 * Query the phone database for albums
@@ -2002,7 +2002,8 @@ public class Filex extends Activity {
 													fieldsTo,
 													albumImages,
 													showArtWhileScrolling,
-													showFrame);
+													showFrame,
+													MAX_IMAGES_IN_CACHE);
 		} else {
 			albumAdapter.context = this.getApplicationContext();
 			albumAdapter.reloadNavigatorWidth();
@@ -2012,32 +2013,20 @@ public class Filex extends Activity {
 		albumAdapter.showFrame = showFrame;
 		
 		/*
-		 * initialize preloaded images array
+		 * schedule Image Caching within X secs
+		 *  - this way it does not hurt the app startup 
 		 */
-		if(albumImages == null || force){
-			if(albumCursor.getCount() < albumAdapter.AVOID_PRELOAD_THRESHOLD){
-				try{
-					for(int i=0; i<albumCursor.getCount(); i++){
-						if(albumImages[i] != null)
-							albumImages[i].recycle();
+		cacheImageHandler.postDelayed(
+				new Runnable(){
+					@Override
+					public void run() {
+						cacheImages(albumNavigatorList.getFirstVisiblePosition());
 					}
-				}catch (Exception e){
-					e.printStackTrace();
-				}
-				albumImages = new Bitmap[albumCursor.getCount()];
-				for(int i=0; i<albumCursor.getCount(); i++){
-					albumImages[i]=albumAdapter.getAlbumBitmap(
-							i, 
-							albumAdapter.BITMAP_SIZE_XSMALL);
-				}
-				albumAdapter.albumImages = albumImages;
-				albumNavigatorList.setSelection(
-						albumNavigatorList.getSelectedItemPosition());
-			}
-		}
+				},
+				2000);
 		
 //		if(albumImages == null || force){
-////			if(albumCursor.getCount() < albumAdapter.AVOID_PRELOAD_THRESHOLD){
+//			if(albumCursor.getCount() < albumAdapter.AVOID_PRELOAD_THRESHOLD){
 //				try{
 //					for(int i=0; i<albumCursor.getCount(); i++){
 //						if(albumImages[i] != null)
@@ -2046,8 +2035,9 @@ public class Filex extends Activity {
 //				}catch (Exception e){
 //					e.printStackTrace();
 //				}
-//				albumImages = new Bitmap[30];
-//				for(int i=0; i<30; i++){
+//				albumImages = new Bitmap[albumCursor.getCount()];
+//				albumImagesIndexes = new int[albumCursor.getCount()];
+//				for(int i=0; i<albumCursor.getCount(); i++){
 //					albumImages[i]=albumAdapter.getAlbumBitmap(
 //							i, 
 //							albumAdapter.BITMAP_SIZE_XSMALL);
@@ -2055,7 +2045,7 @@ public class Filex extends Activity {
 //				albumAdapter.albumImages = albumImages;
 //				albumNavigatorList.setSelection(
 //						albumNavigatorList.getSelectedItemPosition());
-////			}
+//			}
 //		}
 		
 		this.albumNavigatorList.setAdapter(albumAdapter);
@@ -2070,6 +2060,84 @@ public class Filex extends Activity {
 		 */
 		songCursor = initializeSongCursor(null);
 		initializeArtistCursor();
+    }
+    
+    
+    /*
+     * Image Caching Handler
+     */
+    public Handler cacheImageHandler = new Handler(){
+    	@Override
+    	public void handleMessage(Message msg){
+    		
+    	}
+    };
+    
+    /*
+     * Image Caching Thread
+     */
+    Thread imageCachingThread = null;
+    public void imageCachingLaunchThread(int center){
+    	final int centerVar = center;
+    	imageCachingThread = new Thread(){
+    		@Override
+    		public void run(){
+        		albumAdapter.albumImagesCenter = centerVar;
+    			cacheImages(centerVar);
+    		}
+    	};
+    	imageCachingThread.start();
+    }
+    
+    static Bitmap[] albumImages = null;
+    static int[]	albumImagesIndexes = null;
+    final  int		MAX_IMAGES_IN_CACHE = 40;
+    final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
+    /*
+     * Image Caching
+     */
+    int windowMax;
+    int windowMin;
+    public void cacheImages(int center){
+    	windowMax = center + HALF_IMAGES_IN_CACHE;
+    	windowMin = center - HALF_IMAGES_IN_CACHE;
+    	/* reutilize what you can */
+    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
+    		/* Negative */
+    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMax &&
+    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMin &&
+    				center - i > 0){
+    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center] = albumImages[HALF_IMAGES_IN_CACHE - i];
+    			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
+    			
+    		}
+    		/* Positive */
+    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMax &&
+    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMin &&
+    				i != 0){
+    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center] = albumImages[HALF_IMAGES_IN_CACHE + i];
+    			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
+    			
+    		}
+    	}
+    	/* Go get what is missing */
+    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
+    		/* Negative */
+    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
+    				center - i > 0){
+				albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
+									center - i, 
+									albumAdapter.BITMAP_SIZE_XSMALL);    			
+    		}
+    		/* Positive */
+    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
+    				i != 0){
+    			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
+									center + i, 
+									albumAdapter.BITMAP_SIZE_XSMALL);
+    		}
+    	}
+
     }
     
     /*
@@ -3390,6 +3458,11 @@ public class Filex extends Activity {
 				albumAdapter.isScrolling = false;
 				albumListIsScrolling = false;
 
+				imageCachingLaunchThread(view.getFirstVisiblePosition());
+				
+				if(true)
+					return;
+				
 				if(true || !showArtWhileScrolling){
 					int i = view.getFirstVisiblePosition();
 					int count = view.getChildCount();
@@ -3496,6 +3569,9 @@ public class Filex extends Activity {
 			if(scrollState == OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
 				albumAdapter.isScrolling = true;
 				albumListIsScrolling = true;
+				
+				imageCachingThread.interrupt();
+				
 				if(albumListSelectedAlbumTimer != null)
 					albumListSelectedAlbumTimer.cancel();
 

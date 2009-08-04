@@ -76,13 +76,18 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	public File 				albumCoverFilePath = null;
 	public Options 				opts = null;
 	public Bitmap[] 			albumImages;
+	public int[] 				albumImagesIndexes;
+	public int					albumImagesCenter = 0;
 	public Bitmap				albumUndefinedCoverBitmap;
 	public Bitmap				albumUndefinedCoverBigBitmap;
 	public	boolean				PRELOAD = false;
 	public boolean				isScrolling = false;
-	public int					AVOID_PRELOAD_THRESHOLD = 100;
+	public int					AVOID_PRELOAD_THRESHOLD = 10000;
 	public boolean				showArtWhileScrolling = false;
 	public boolean				showFrame = false;
+
+	private int					HALF_IMAGES_IN_CACHE;
+	
 
     public AlbumCursorAdapter(Context context, 
     							int layout, 
@@ -91,12 +96,14 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     							int[] to,
     							Bitmap[] albumImages,
     							boolean showArtWhileScrolling,
-    							boolean showFrame){
+    							boolean showFrame,
+    							int	imagesInCache){
         super(context, layout, c, from, to);
         this.cursor = c;
         this.context = context;
         this.showArtWhileScrolling = showArtWhileScrolling;
         this.showFrame = showFrame;
+        this.HALF_IMAGES_IN_CACHE = imagesInCache/2;
         
         /*
          * Read the width of the Navigator
@@ -265,10 +272,16 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 		    	 */
 		    	if(PRELOAD){
 		    		if(albumImage != null && cursor != null){
-		    			if(albumImages[cursor.getPosition()] != null)
-		    				albumImage.setImageBitmap(albumImages[cursor.getPosition()]);
+		    			if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] == cursor.getPosition())
+		    				albumImage.setImageBitmap(albumImages[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter]);
 		    			else
 		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
+		    			
+		    			
+//		    			if(albumImages[cursor.getPosition()] != null)
+//		    				albumImage.setImageBitmap(albumImages[cursor.getPosition()]);
+//		    			else
+//		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
 		    		}
 		    		return;
 		    	} else {
