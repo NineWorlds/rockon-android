@@ -1967,6 +1967,17 @@ public class Filex extends Activity {
 															)
 														);
 			this.albumNavigatorScrollListener.onScrollStateChanged(this.albumNavigatorList, OnScrollListener.SCROLL_STATE_IDLE);
+			
+			/*
+			 * Refresh Visible List
+			 */
+			this.refreshVisibleList(albumNavigatorList);
+			/*
+			 * Load Cache if not loaded
+			 */
+			if(this.albumImages == null){
+				this.imageCachingLaunchThread(albumCursorPositionPlaying);
+			}
 
     	} catch (Exception e) {
     		e.printStackTrace();
@@ -1992,23 +2003,37 @@ public class Filex extends Activity {
 		fieldsFrom[0] = MediaStore.Audio.Albums.ALBUM_ART;
 		fieldsTo[0] = R.id.navigator_albumart_image;
 		
+		/*
+		 * Allocate Cache if needed
+		 */
+		if(albumImages == null || force){
+			albumImages = new Bitmap[MAX_IMAGES_IN_CACHE+1];
+			albumImagesIndexes = new int[MAX_IMAGES_IN_CACHE+1];
+		}
+		
+		/*
+		 * Create adapter (receives the cache vectors, the cursor, and other params)
+		 */
 		if(albumAdapter == null || force){
 			Log.i("NOCACHE", "Album List was not cached");
 			albumAdapter = new AlbumCursorAdapter(
-													this.getApplicationContext(),
-													R.layout.navigator_item,
-													albumCursor,
-													fieldsFrom,
-													fieldsTo,
-													albumImages,
-													showArtWhileScrolling,
-													showFrame,
-													MAX_IMAGES_IN_CACHE);
+					this.getApplicationContext(),
+					R.layout.navigator_item,
+					albumCursor,
+					fieldsFrom,
+					fieldsTo,
+					initializeNewAlbumCursor(),
+					albumImages,
+					albumImagesIndexes,
+					showArtWhileScrolling,
+					showFrame,
+					MAX_IMAGES_IN_CACHE);
 		} else {
 			albumAdapter.context = this.getApplicationContext();
 			albumAdapter.reloadNavigatorWidth();
 		}
 		
+		// seems redundant
 		//albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
 		albumAdapter.showFrame = showFrame;
 		
@@ -2016,14 +2041,16 @@ public class Filex extends Activity {
 		 * schedule Image Caching within X secs
 		 *  - this way it does not hurt the app startup 
 		 */
-		cacheImageHandler.postDelayed(
-				new Runnable(){
-					@Override
-					public void run() {
-						cacheImages(albumNavigatorList.getFirstVisiblePosition());
-					}
-				},
-				2000);
+		if(this.albumImages == null){
+			cacheImageHandler.postDelayed(
+					new Runnable(){
+						@Override
+						public void run() {
+							cacheImages(albumNavigatorList.getFirstVisiblePosition());
+						}
+					},
+					2000);
+		}
 		
 //		if(albumImages == null || force){
 //			if(albumCursor.getCount() < albumAdapter.AVOID_PRELOAD_THRESHOLD){
@@ -2048,7 +2075,13 @@ public class Filex extends Activity {
 //			}
 //		}
 		
+		/*
+		 * Assign the adapter to the album list
+		 */
 		this.albumNavigatorList.setAdapter(albumAdapter);
+		/*
+		 * Attach the scroll listener to the album list (we need to update the cache everytime the user stops scrolling)
+		 */
 		this.albumNavigatorScrollListener.onScrollStateChanged(this.albumNavigatorList, OnScrollListener.SCROLL_STATE_IDLE);
 		
 		// No albums
@@ -2083,7 +2116,7 @@ public class Filex extends Activity {
     		@Override
     		public void run(){
         		albumAdapter.albumImagesCenter = centerVar;
-    			cacheImages(centerVar);
+        		cacheImages(centerVar);
     		}
     	};
     	imageCachingThread.start();
@@ -2091,7 +2124,7 @@ public class Filex extends Activity {
     
     static Bitmap[] albumImages = null;
     static int[]	albumImagesIndexes = null;
-    final  int		MAX_IMAGES_IN_CACHE = 40;
+    final  int		MAX_IMAGES_IN_CACHE = 56;
     final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
     /*
      * Image Caching
@@ -2101,55 +2134,111 @@ public class Filex extends Activity {
     public void cacheImages(int center){
     	windowMax = center + HALF_IMAGES_IN_CACHE;
     	windowMin = center - HALF_IMAGES_IN_CACHE;
-    	/* reutilize what you can */
-    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
-    		/* Negative */
-    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMax &&
-    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMin &&
-    				center - i > 0){
-    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center] = albumImages[HALF_IMAGES_IN_CACHE - i];
-    			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
-    			
-    		}
-    		/* Positive */
-    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMax &&
-    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMin &&
-    				i != 0){
-    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center] = albumImages[HALF_IMAGES_IN_CACHE + i];
-    			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
-    			
-    		}
+    	/* 
+    	 * re-utilize what you can 
+    	 */
+    	try{
+	    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
+	    		/*
+	    		 * Check if Album List started to scroll
+	    		 */
+	    		if(albumListIsScrolling)
+	    			return;
+	    		
+	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
+	    		
+	    		/* Negative */
+	    		if(center - i > 0 &&
+	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMax &&
+	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMin){
+	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE - i];
+	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE - i];
+	    			
+	    		}
+	    		
+	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + "(center is " + center +")"); 
+	    	
+	    		/*
+	    		 * Check if List started to scroll
+	    		 */
+	    		if(albumListIsScrolling)
+	    			return;
+	    		
+	    		
+	    		/* Positive */
+	    		if(i != 0 &&
+	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMax &&
+	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMin){
+	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE + i];
+	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE + i];
+	    			
+	    		}
+	    	}
+    	} catch(Exception e){
+    		e.printStackTrace();
     	}
-    	/* Go get what is missing */
-    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
+    	
+    	/*
+    	 *  Go get what is missing 
+    	 */
+    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){		
+    		/*
+    		 * Check if List started to scroll
+    		 */
+    		if(albumListIsScrolling)
+    			return;
+    		
     		/* Negative */
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
     				center - i > 0){
+    			
+    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
+    			
 				albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
 									center - i, 
-									albumAdapter.BITMAP_SIZE_XSMALL);    			
+									albumAdapter.BITMAP_SIZE_XSMALL);
+				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
     		}
+    		
+    		/*
+    		 * Check if List started to scroll
+    		 */
+    		if(albumListIsScrolling)
+    			return;
+    		
     		/* Positive */
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
     				i != 0){
+    			
+    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
+    			
     			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
 									center + i, 
 									albumAdapter.BITMAP_SIZE_XSMALL);
+    			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
     		}
     	}
 
     }
     
     /*
-     * Cursor Initialization
+     * Cursor Initialization (convenience method)
      */
-    public void	initializeAlbumCursor(){
+    public void initializeAlbumCursor(){
+    	albumCursor = initializeNewAlbumCursor();
+    }
+    
+    /*
+     * Cursor Initialization (creates new cursor)
+     */
+    public Cursor	initializeNewAlbumCursor(){
+    	Cursor newCursor;
 		try{
 	    	Log.i("DBG", "Initializing Album Cursor - playlist - "+playlist);
 	//		playlist = this.getSharedPreferences(this.PREFS_NAME, 0).getLong(constants.PREF_KEY_PLAYLIST, constants.PLAYLIST_ALL);
 	    	if(playlist == constants.PLAYLIST_ALL){
 		    	String sortClause = MediaStore.Audio.Albums.ARTIST+" ASC";
-		    	albumCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+		    	newCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
 						ALBUM_COLS, // we should minimize the number of columns
 						null,	// all albums 
 						null,   // parameters to the previous parameter - which is null also 
@@ -2189,7 +2278,7 @@ public class Filex extends Activity {
 		    		//Log.i("PLAYLIST_RECENT", songCursor.getDouble(songCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED))+" > "+ (System.currentTimeMillis()/1000 - period));
 		    	}
 		    	sortOrder = MediaStore.Audio.Albums.ARTIST+" ASC";
-		    	albumCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+		    	newCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
 						ALBUM_COLS, // we should minimize the number of columns
 						whereClause,	// all albums 
 						null,   // parameters to the previous parameter - which is null also 
@@ -2235,7 +2324,7 @@ public class Filex extends Activity {
 		    	
 		    	Log.i("DBG", whereClause);
 		    	sortClause = MediaStore.Audio.Albums.ARTIST+" ASC";
-		    	albumCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+		    	newCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
 						ALBUM_COLS, // we should minimize the number of columns
 						whereClause,	// all albums 
 						null,   // parameters to the previous parameter - which is null also 
@@ -2243,9 +2332,14 @@ public class Filex extends Activity {
 						);
 		    	Log.i("DBG", "query length = "+albumCursor.getCount());
 	    	}
+	    	
+	    	return newCursor;
+	    	
 		}catch(Exception e){
 			e.printStackTrace();
+			return null;
 		}
+		
 //    	/*************DBG********************************/
 //    	initializeAlbumCursorFromPlaylist();
     }
@@ -2898,6 +2992,7 @@ public class Filex extends Activity {
     		/*
     		 * Save albumCursor
     		 */
+			// not required.......
     		albumCursor = ((AlbumCursorAdapter) parent.getAdapter()).getCursor();
 
     		/*
@@ -3458,6 +3553,17 @@ public class Filex extends Activity {
 				albumAdapter.isScrolling = false;
 				albumListIsScrolling = false;
 
+				/*
+				 * Update the visible views
+				 */
+				if(true){ // probably do this only if the visible views were not cached
+					refreshVisibleList(view);
+				}
+				
+				Log.i("SCROLLIDLE", "Will start CACHING");
+				/*
+				 * Cache new images in range
+				 */
 				imageCachingLaunchThread(view.getFirstVisiblePosition());
 				
 				if(true)
@@ -3569,9 +3675,7 @@ public class Filex extends Activity {
 			if(scrollState == OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
 				albumAdapter.isScrolling = true;
 				albumListIsScrolling = true;
-				
-				imageCachingThread.interrupt();
-				
+								
 				if(albumListSelectedAlbumTimer != null)
 					albumListSelectedAlbumTimer.cancel();
 
@@ -3604,7 +3708,37 @@ public class Filex extends Activity {
 		}
     	
     };
-    
+
+    /*
+     * Refresh the Visible Part of the Album List
+     */
+    public void refreshVisibleList(AbsListView view){
+		int i = view.getFirstVisiblePosition();
+		int count = view.getChildCount();
+		for(int j = 0; j < count; j++){
+			View v = view.getChildAt(j);
+			/*
+			 * Reload ImageView
+			 */
+			ImageView albumImage = (ImageView)
+				v.findViewById(R.id.navigator_albumart_image);
+			if(albumImage != null){
+				// TODO: Optimize and cache already this image
+				albumImage.setImageBitmap(albumAdapter.getAlbumBitmap(j+i, BITMAP_SIZE_SMALL));
+//				// animate appearance
+//				AlphaAnimation coverFadeIn = new AlphaAnimation(0.2f, 1.0f);
+//		    	coverFadeIn.setFillAfter(true);
+//				coverFadeIn.setDuration(250*(j+1));
+//				albumImage.startAnimation(coverFadeIn);
+			}
+			/* Hide Artist Name */
+	    	TextView albumImageAlternative = (TextView)
+	    		v.findViewById(R.id.navigator_albumart_alternative);
+	    	if(albumImageAlternative != null)
+	    		albumImageAlternative.setVisibility(View.GONE);
+
+		}
+    }
 //    Handler navigationInitialHandler = new Handler(){
 //    	public void handleMessage(Message msg){
 //    		//navigatorInitialTextView.setText(""+(char)msg.what);

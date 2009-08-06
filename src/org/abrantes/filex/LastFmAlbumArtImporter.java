@@ -668,7 +668,7 @@ public class LastFmAlbumArtImporter{
 		    BitmapFactory.Options opts = new BitmapFactory.Options();
 		    opts.inJustDecodeBounds = true;
 		    Bitmap albumArtBitmap = BitmapFactory.decodeFile(fileName, opts);
-		    if(opts.outHeight < 320 || opts.outWidth < 320)
+		    if(opts.outHeight < 300 || opts.outWidth < 300)
 		    	return null;
 		    int MAX_DIM = 460;
 		    int sampling = 1;
@@ -923,7 +923,7 @@ public class LastFmAlbumArtImporter{
 		    	BitmapFactory.Options opts = new BitmapFactory.Options();
 				opts.inJustDecodeBounds = true;
 				Bitmap bmTmp = BitmapFactory.decodeFile(albumCoverPath, opts);
-				if(opts == null || opts.outHeight < 320 || opts.outWidth < 320)
+				if(opts == null || opts.outHeight < 300 || opts.outWidth < 300)
 					albumCoverPath = null;
 				if(bmTmp != null)
 					bmTmp.recycle();
@@ -978,7 +978,7 @@ public class LastFmAlbumArtImporter{
 	    	BitmapFactory.Options opts = new BitmapFactory.Options();
 			opts.inJustDecodeBounds = true;
 			Bitmap bmTmp = BitmapFactory.decodeFile(albumCoverPath, opts);
-			if(opts == null || opts.outHeight < 320 || opts.outWidth < 320)
+			if(opts == null || opts.outHeight < 300 || opts.outWidth < 300)
 				albumCoverPath = null;
 			if(bmTmp != null)
 				bmTmp.recycle();
