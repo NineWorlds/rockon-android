@@ -28,6 +28,10 @@ public class PlayerServiceConnection implements ServiceConnection{
 		filex.playerServiceIface = PlayerServiceInterface.
 										Stub.
 											asInterface(service);
+		
+		if(true)
+			return;
+		
 		/*
 		 * Set some preferences
 		 */

@@ -47,7 +47,8 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     double 						CURRENT_PLAY_SCREEN_FRACTION_LANDSCAPE = 0.75;
     double 						NAVIGATOR_SCREEN_FRACTION = 1 - CURRENT_PLAY_SCREEN_FRACTION;
     double		 				NAVIGATOR_SCREEN_FRACTION_LANDSCAPE = 1 - CURRENT_PLAY_SCREEN_FRACTION_LANDSCAPE;
-    
+
+    // should go into constants class
     int							BITMAP_SIZE_SMALL = 0;
     int							BITMAP_SIZE_NORMAL = 1;
     int							BITMAP_SIZE_FULLSCREEN = 2;
@@ -237,6 +238,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
      */
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
+    	Log.i("BINDVIEW", "Position: " + cursor.getPosition());
     	try{
 	    	/*
 	    	 * Get the item list image component set its height right
@@ -278,30 +280,30 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 		    	 */
 		    	if(PRELOAD){
 		    		if(albumImage != null && cursor != null){
-//		    			Log.i("SHOW", "cursor.getPosition " + cursor.getPosition() + " -- Center " + albumImagesCenter);
-//		    			Log.i("SHOW", albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter -1] + "," +
-//		    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] + "," +
-//		    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter + 1] + " ---- " +
-//		    					cursor.getPosition());
+		    			Log.i("SHOW", "cursor.getPosition " + cursor.getPosition() + " -- Center " + albumImagesCenter);
+		    			Log.i("SHOW", "Cached Idx: " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] +
+		    					" == CursorPosition: " + cursor.getPosition());
 		    			if(Math.abs(cursor.getPosition()-albumImagesCenter) < HALF_IMAGES_IN_CACHE && 
 		    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] == cursor.getPosition()){
+		    				Log.i("SHOW", "Cached Cover");
 		    				albumImage.setImageBitmap(albumImages[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter]);
-//		    				/* Hide Artist Name */
-//		    		    	albumImageAlternative = (TextView)
-//					    		view.findViewById(R.id.navigator_albumart_alternative);
-//					    	albumImageAlternative.setVisibility(View.GONE);
+		    				/* Hide Artist Name */
+		    		    	albumImageAlternative = (TextView)
+					    		view.findViewById(R.id.navigator_albumart_alternative);
+					    	albumImageAlternative.setVisibility(View.GONE);
 		    			}
 		    			else{
-		    				albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_XSMALL));
-//		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
-//		    				/* Show Artist Name */
-//		    				if(!cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)).equals("<unknown>")){
-//			    		    	albumImageAlternative = (TextView)
-//						    		view.findViewById(R.id.navigator_albumart_alternative);
-//						    	albumImageAlternative.setLayoutParams(params);
-//						    	albumImageAlternative.setVisibility(View.VISIBLE);
-//						    	albumImageAlternative.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)));
-//		    				}
+		    				Log.i("SHOW", "Undefined Cover");
+//		    				albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_XSMALL));
+		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
+		    				/* Show Artist Name */
+		    				if(!cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)).equals("<unknown>")){
+			    		    	albumImageAlternative = (TextView)
+						    		view.findViewById(R.id.navigator_albumart_alternative);
+						    	albumImageAlternative.setLayoutParams(params);
+						    	albumImageAlternative.setVisibility(View.VISIBLE);
+						    	albumImageAlternative.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)));
+		    				}
 		    			}
 		    		}
 		    		return;

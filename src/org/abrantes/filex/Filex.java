@@ -110,6 +110,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.SimpleCursorAdapter;
 import android.widget.Spinner;
@@ -185,8 +186,6 @@ public class Filex extends Activity {
     double 				NAVIGATOR_SCREEN_FRACTION = 1 - CURRENT_PLAY_SCREEN_FRACTION;
     double 				NAVIGATOR_SCREEN_FRACTION_LANDSCAPE = 1 - CURRENT_PLAY_SCREEN_FRACTION_LANDSCAPE;
     String				FILEX_PATH = "/sdcard/RockOn/";
-    //String			FILEX_ALBUM_ART_PATH = "/sdcard/RockOn/albumArt/";
-    //String			FILEX_SMALL_ALBUM_ART_PATH = "/sdcard/RockOn/albumArt/small/";
     String				FILEX_ALBUM_ART_PATH = "/sdcard/albumthumbs/RockOn/";
     String				FILEX_SMALL_ALBUM_ART_PATH = "/sdcard/albumthumbs/RockOn/small/";
     static String		FILEX_BACKGROUND_PATH = "/sdcard/albumthumbs/RockOn/backgrounds/";
@@ -194,7 +193,7 @@ public class Filex extends Activity {
     String				FILEX_PREFERENCES_PATH = "/sdcard/RockOn/preferences/";
     String				FILEX_FILENAME_EXTENSION = "";
     long				VERSION = (long) 3;
-    long				ART_IMPORT_INTVL = 2*24*60*60*1000;
+    long				ART_IMPORT_INTVL = 20*24*60*60*1000;
     double				CONCERT_RADIUS_DEFAULT = 750000;
     double				CONCERT_RADIUS_INCREMENT = 50000;
     Constants			constants = new Constants();
@@ -219,18 +218,22 @@ public class Filex extends Activity {
     static final int	LIST_EXPANDED_VIEW = 1;
     static final int	FULLSCREEN_VIEW = 2;
     
+    /*
+     * Some static variables
+     */
     static int			VIEW_STATE = NORMAL_VIEW;
-    
     static boolean		GRATIS = false;
-    
+    static int			currentAlbumPosition = -1;
+    static int			currentSongPosition = -1;
+//    static int			currentAlbumPosition = 6;
+//    static int			currentSongPosition = 0;
+//    
     
     /*********************************************
      * 
      * Service intent stuff
      * 
      *********************************************/
-//    String		 						MUSIC_CHANGED = "org.abrantes.filex.intent.action.MUSIC_CHANGED";  
-//    String 								ALBUM_CHANGED = "org.abrantes.filex.intent.action.ALBUM_CHANGED";
     protected IntentFilter 					musicChangedIntentFilter = new IntentFilter(new Constants().MUSIC_CHANGED);  
     protected IntentFilter 					albumChangedIntentFilter = new IntentFilter(new Constants().ALBUM_CHANGED); 
     protected IntentFilter 					mediaButtonPauseIntentFilter = new IntentFilter(new Constants().MEDIA_BUTTON_PAUSE);  
@@ -248,10 +251,8 @@ public class Filex extends Activity {
      *********************************************/
     private Context						context = null;
     public	ContentResolver				contentResolver;
-    public	Cursor						albumCursor = null;
-    public	Cursor						songCursor = null;
-    public	Cursor						artistCursor = null;
     public	int							albumCursorPositionPlaying = 0;
+    private int 						albumNavigatorItemLongClickIndex;
     public 	boolean						SHUFFLE = false;
     public	PlayerServiceConnection		playerServiceConn = null;
     public	PlayerServiceInterface		playerServiceIface = null;
@@ -263,8 +264,7 @@ public class Filex extends Activity {
     private LastFmEventImporter 		lastFmEventImporter = null;
     public	double						concertRadius;
     private AlbumCursorAdapter			albumAdapter = null;
-    //private AlbumCursorAdapter			albumAdapter = null;
-    public	long					playlist = new Constants().PLAYLIST_NONE;
+    public	long						playlist = new Constants().PLAYLIST_NONE;
     public	static int					recentPlaylistPeriod;
     private FilexDefaultExceptionHandler fdHandler;
     public	static	boolean				scrobbleDroid;
@@ -272,8 +272,12 @@ public class Filex extends Activity {
     public	static	boolean				showFrame;
     public	static	boolean				alwaysLandscape;
     public	static	boolean				autoRotate;
-    int albumNavigatorItemLongClickIndex;
-
+//    public	static 	Cursor				albumCursor = null;
+//    public	static	Cursor				songCursor = null;
+    public	static 	Cursor				albumCursor = null;
+    public	static	Cursor				songCursor = null;
+       
+    
     
     /*********************************************
      * 
@@ -288,8 +292,6 @@ public class Filex extends Activity {
     private Rotate3dAnimationY		showRight = null;
     public	AlphaAnimation			fadeAlbumOut = null;
     public	AlphaAnimation			fadeAlbumIn = null;
-//    public	TranslateAnimation		fadeAlbumOut = null;
-//    public	TranslateAnimation		fadeAlbumIn = null;
     
     /*********************************************
      * 
@@ -308,17 +310,12 @@ public class Filex extends Activity {
     public	ViewGroup				albumNavigatorLayoutOuter = null;
     public	ViewGroup				albumNavigatorLayout = null;
     public	ListView				albumNavigatorList = null;
-//    private ViewGroup				albumNavigatorTextContainer = null;
-//    public	TextView				navigatorInitialTextView = null;
     private ViewGroup				currentPlayingSongContainer = null;
     private TextView				artistNameText = null;
     private TextView				albumNameText = null;
     private TextView				songNameText = null;
     private TextView				songDurationText = null;
     private TextView				songDurationOngoingText = null;
-//    public	ViewGroup				songListContainer = null;
-//    private TextView				songListHint = null;
-//    public	ListView				songListView = null;
     public	ViewGroup				eventListViewContainer = null;
     public	ImageButton				eventListDecreaseRadius = null;
     public	ImageButton				eventListIncreaseRadius = null;
@@ -327,26 +324,17 @@ public class Filex extends Activity {
     public	ListView				eventListView = null;
     public	ProgressBar				songProgressBar = null;
     public	ImageView 				forwardImage = null;
-//    public	ImageView 				forwardImageOverlay = null;
     public	ImageView 				rewindImage = null;
-//    public	ImageView 				rewindImageOverlay = null;
     public	ImageView 				nextImage = null;
-//    public	ImageView 				nextImageOverlay = null;
     public	ImageView 				playPauseImage = null;
-//    public	ImageView 				playPauseImageOverlay = null;
-
     
     public	WebView					webView	= null;
     public	ViewGroup				songSearchContainer = null;
     public	ViewGroup				helpView = null;
     public	ImageView				helpImageView = null;
-    //public	Button					songSearchButton = null;
     public	AutoCompleteTextView	songSearchTextView = null;
     public	ProgressDialog 			albumReloadProgressDialog = null;
     public	ProgressDialog 			concertAnalysisProgressDialog = null;
-    //private	ImageView		songProgressTotalView = null;
-    //private	ImageView		songProgressView = null;
-    //public	PreferenceScreen		preferenceScreen = null;
     
 	/**********************************************
 	 * 
@@ -388,6 +376,7 @@ public class Filex extends Activity {
         return result;
     }
     
+    double logTime = System.currentTimeMillis();
 	/**********************************************
 	 * 
 	 *  Called when the activity is first created
@@ -399,43 +388,20 @@ public class Filex extends Activity {
         context = this;        	
         System.gc();
         
-        //Log.i("PRFMC", "1");
+        Log.i("STARTUP1", System.currentTimeMillis() - logTime + "msec");
+        
         /*
     	 * Window Properties
     	 */
-    	//requestWindowFeature(Window.FEATURE_PROGRESS);
-    	//requestWindowFeature(Window.PROGRESS_VISIBILITY_ON);
     	requestWindowFeature(Window.FEATURE_NO_TITLE);
-    	
-    	
-    	/*
-    	 * Blur&Dim the BG
-    	 */
-        // Have the system blur any windows behind this one.
-//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND,
-//                WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
-////        getWindow().setFlags(WindowManager.LayoutParams.FLAG_DITHER, 
-////        		WindowManager.LayoutParams.FLAG_DITHER);
-//        getWindow().setFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND, 
-//        		WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-//        WindowManager.LayoutParams params = getWindow().getAttributes();
-//        params.dimAmount = 0.625f;
-//        getWindow().setAttributes(params);
-        
-//        Resources.Theme theme = getTheme();
-//        theme.dump(arg0, arg1, arg2)
-        
-    	//setContentView(R.layout.songfest_main);
-    	//Log.i("PRFMC", "2");
-
+    	    	
     	/*
     	 * Initialize Display
     	 */
     	WindowManager windowManager 		= (WindowManager) 
 												getSystemService(Context.WINDOW_SERVICE);
     	this.display 						= windowManager.getDefaultDisplay();
-    	//Log.i("PRFMC", "3");
-
+    	
    	
     	/*
     	 * Set Bug Report Handler
@@ -449,12 +415,16 @@ public class Filex extends Activity {
         checkConcertDirectory();
         checkPreferencesDirectory();
         checkBackgroundDirectory();
-        //Log.i("PRFMC", "7");
-    	
+    
+        Log.i("STARTUP2", System.currentTimeMillis() - logTime + "msec");
+        
     	/*
     	 * Get Preferences
     	 */
     	readPreferences();
+    	
+    	Log.i("STARTUP3", System.currentTimeMillis() - logTime + "msec");
+        
     	
     	/*
     	 * Force landscape or auto-rotate orientation if user requested
@@ -469,22 +439,20 @@ public class Filex extends Activity {
          */
     	setContentView(R.layout.songfest_main);
 
-    	//getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-    	//if (true) return;
-    	
-    	//if(true)
-    	//	return;
-    	//Log.i("PRFMC", "4");
+    	Log.i("STARTUP4", System.currentTimeMillis() - logTime + "msec");
+        
         initializeAnimations();
-        //Log.i("PRFMC", "5");
         initializeUiVariables();
-        //Log.i("PRFMC", "6");
-
+        
+        Log.i("STARTUP5", System.currentTimeMillis() - logTime + "msec");
+        
     	/*
     	 * Set Background
     	 */
         setBackground();
-    	        
+    	
+        Log.i("STARTUP5.5", System.currentTimeMillis() - logTime + "msec");
+        
         /*
          * Set Current View
          */
@@ -500,10 +468,7 @@ public class Filex extends Activity {
         	break;
         }
         
-//        AlphaAnimation aAnim = new AlphaAnimation(0.0f, 0.92f);
-//        aAnim.setFillAfter(true);
-//        aAnim.setDuration(200);
-//        mainUIContainer.startAnimation(aAnim);
+        Log.i("STARTUP6", System.currentTimeMillis() - logTime + "msec");
         
         /*
          * Check for SD Card
@@ -524,10 +489,11 @@ public class Filex extends Activity {
          */
         contentResolver = getContentResolver();
 
+        Log.i("STARTUP7", System.currentTimeMillis() - logTime + "msec");
+        
         /*
          * Get Preferences
          */
-        //SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
         RockOnPreferenceManager settings = new RockOnPreferenceManager(FILEX_PREFERENCES_PATH);
         settings = new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH);
         // Shuffle
@@ -559,30 +525,21 @@ public class Filex extends Activity {
 //        }
 //        if(pD != null)
 //        	pD.dismiss();
-        
-        
-        /*
-         * Initialize mediaPlayer
-         */
-        //this.mediaPlayer = new MediaPlayer();
-        //this.mediaPlayer.setOnCompletionListener(songCompletedListener);
 
-        
+   	   	Log.i("STARTUP8", System.currentTimeMillis() - logTime + "msec");
+   	   	
     	/*
     	 * Initialize (or connect to) BG Service
     	 *  - when connected it will call the method getCurrentPlaying()
     	 *  	and will cause the Service to reset its albumCursor
     	 */
     	initializeService();
-    	//Log.i("PRFMC", "8");
     	musicChangedIntentReceiver= new MusicChangedIntentReceiver();  
         albumChangedIntentReceiver= new AlbumChangedIntentReceiver();
         mediaButtonPauseIntentReceiver = new MediaButtonPauseIntentReceiver();
         mediaButtonPlayIntentReceiver = new MediaButtonPlayIntentReceiver();
         registerReceiver(musicChangedIntentReceiver, musicChangedIntentFilter);
-        //Log.i("PRFMC", "9");
         registerReceiver(albumChangedIntentReceiver, albumChangedIntentFilter);
-        //Log.i("PRFMC", "10");
         registerReceiver(mediaButtonPauseIntentReceiver, mediaButtonPauseIntentFilter);
         registerReceiver(mediaButtonPlayIntentReceiver, mediaButtonPlayIntentFilter);
         // calls also getCurrentPlaying() upon connection
@@ -593,18 +550,20 @@ public class Filex extends Activity {
 //        mediaButtonIntentReceiver = new MediaButtonIntentReceiver();
 //        registerReceiver(mediaButtonIntentReceiver, new IntentFilter("android.intent.action.MEDIA_BUTTON"));
         
+        
+        Log.i("STARTUP10", System.currentTimeMillis() - logTime + "msec");
+        
+        
     	/*
          * Get album information on a new
          * thread
          */
-        //new Thread(){
-        //	public void run(){
-        		getAlbums(false);
-        //Log.i("PRFMC", "11");
-        //	}
-        //}.start();
+//        getAlbums(false);
         	     
      
+        Log.i("STARTUP11", System.currentTimeMillis() - logTime + "msec");
+        
+        
    	   	/*
    	   	 * Check for first time run ----------
    	   	 * 
@@ -612,77 +571,11 @@ public class Filex extends Activity {
    	   	 * 	&
    	   	 * Show Help Screen
    	   	 */
-//   	   	if(!settings.contains("Version")){
-//   	   		Editor settingsEditor = settings.edit();
-//   	   		settingsEditor.putLong("Version", VERSION);
-//   	   		settingsEditor.commit();
-//   	   		this.hideMainUI();
-//   	   		this.showHelpUI();
-//   	   	}
-        Log.i("DBG", "Version - " + (new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).getLong("Version", 0) +" - "+ VERSION);		
    	   	if(!(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).contains("Version")
    	   			|| (new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).getLong("Version", 0) < VERSION){
    	   	
-   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putLong("Version", VERSION);
-   	   		
-   	   		/*
-   	   		 * Clear previous Album Art
-   	   		 */
-   	   		Builder aD = new AlertDialog.Builder(context);
-   	   		aD.setTitle("New Version");
-   	   		aD.setMessage("The new version of RockOn supports album art download from higher quality sources. Do you want to download art now? " +
-   	   				"Every 10 albums will take aproximately 1 minute to download. " +
-   	   				"(You can always do this later by choosing the 'Get Art' menu option)");
-   	   		aD.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+   	   		handleNewVersionBoot();
 
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-		   	   		//(new RockOnPreferenceManager(FILEX_PREFERENCES_PATH)).putLong("artImportDate", 0);
-		   	   		try{
-			   	   		File albumArtDir = new File(FILEX_ALBUM_ART_PATH);
-			   	   		String[] fileList = albumArtDir.list();
-			   	   		File albumArtFile;
-			   	   		for(int i = 0; i< fileList.length; i++){
-			   	   			albumArtFile = new File(albumArtDir.getAbsolutePath()+"/"+fileList[i]);
-			   	   			albumArtFile.delete();
-			   	   		}
-			   	   		checkAlbumArtDirectory();
-			   	   		triggerAlbumArtFetching();
-		   	   		}catch(Exception e){
-		   	   			e.printStackTrace();
-		   	   		}
-				}
-   	   			
-   	   		});
-   	   		aD.setNegativeButton("No", new DialogInterface.OnClickListener(){
-
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-				
-				}
-   	   			
-   	   		});
-   	   		aD.show();
-   	   		
-   	   		/*
-   	   		 * Version 2 specific default preference changes
-   	   		 */
-   	   		// version 2 specific
-   	   	   	if(albumCursor.getCount() > 100)
-   	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, false);
-   	   	   	else
-   	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
-   	   		
-   	   		readPreferences();
-   	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
-   	   		albumAdapter.showFrame = showFrame;
-   			//
-   	   		
-   	   		/*
-   	   		 * Show help screen
-   	   		 */
-   	   		this.hideMainUI();
-   	   		this.showHelpUI();
    	   	} else {
    	        /*
    	         * Run albumArt getter in background
@@ -692,10 +585,141 @@ public class Filex extends Activity {
    	   		if(lastAlbumArtImportDate + this.ART_IMPORT_INTVL < System.currentTimeMillis()){
    	   			triggerAlbumArtFetching();
    	   		}
-   	   		//Log.i("PRFMC", "13");
    	   	}
+
+   	   	Log.i("STARTUP12", System.currentTimeMillis() - logTime + "msec");
+     
+    	/*
+    	 * Query the phone database for albums (& songs)
+    	 * 	- the cursor are static because they take a lot of time to initialize (300ms + 500ms)
+    	 */
+   	   	if(albumCursor == null)
+   	   		initializeAlbumCursor();
+   	   	Log.i("STARTUP12.5", System.currentTimeMillis() - logTime + "msec");
+   	   	if(songCursor == null)
+   	   		songCursor = initializeSongCursor(null);
+   	   	
+		Log.i("STARTUP13", System.currentTimeMillis() - logTime + "msec"); 			
+			
+   	   	/*
+   	   	 * Update Current Playing UI
+   	   	 */
+   	   	if(currentAlbumPosition != -1)
+   	   		updateCurrentPlayingUi();
+   	   	
+   	   	Log.i("STARTUP14", System.currentTimeMillis() - logTime + "msec"); 			
+   	   	
+   	   	/*
+   	   	 * Initialize other GUI components but dont delay initialization
+   	   	 */
+   	   	postCreateUiInit.sendEmptyMessageDelayed(0, 1000);
+   	   	
+   	   	Log.i("STARTUP88888", System.currentTimeMillis() - logTime + "msec");
+     
     }
     
+    
+    /***********************************
+     * 
+     * Update current playing Ui
+     * 
+     ***********************************/
+    public void updateCurrentPlayingUi(){
+    	/* 
+    	 * move cursors to the current playing position 
+    	 */
+    	albumCursor.moveToPosition(currentAlbumPosition);
+    	songCursor = initializeSongCursor(albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)));
+    	songCursor.moveToPosition(currentSongPosition);
+    	
+    	/*
+    	 * Update Current PLaying Album Cover
+    	 */
+    	AlbumArtUtils albumArtUtils = new AlbumArtUtils(
+    			((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay(),
+    			showFrame);
+    	if(VIEW_STATE == FULLSCREEN_VIEW)
+			this.currentAlbumPlayingImageView.setImageBitmap(
+					albumArtUtils.getAlbumBitmap(
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)), 
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)), 
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ART)), 
+						BITMAP_SIZE_FULLSCREEN));
+		else
+			this.currentAlbumPlayingImageView.setImageBitmap(
+					albumArtUtils.getAlbumBitmap(
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)), 
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)), 
+						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ART)), 
+						BITMAP_SIZE_NORMAL));
+//    	if(VIEW_STATE == FULLSCREEN_VIEW)
+//			this.currentAlbumPlayingImageView.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_FULLSCREEN));
+//		else
+//			this.currentAlbumPlayingImageView.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_NORMAL));
+		
+    	/*
+    	 * Show Frame (or not)
+    	 */
+		if(showFrame)
+			this.currentAlbumPlayingOverlayImageView.setVisibility(View.VISIBLE);
+		else
+			this.currentAlbumPlayingOverlayImageView.setVisibility(View.GONE);
+		
+		Log.i("UPDATECURRENTUI", albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)) + " - " +
+				albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)) + " - " + 
+				songCursor.getString(songCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)) + " " +currentSongPosition);
+		
+		/*
+		 * Update currentPlaying artist UI component
+		 */
+		this.updateArtistTextUI();
+		
+		/*
+		 * Update currentPlaying song UI component
+		 */
+		this.updateSongTextUI();
+		
+		/*
+		 * Update Song Progress
+		 */
+		// this should be done once we get  a connection to the service
+		//this.updateSongProgress();
+    	
+    	
+    }
+    
+    /****************************************
+     * 
+     * doPostInitGuiInitialization
+     * 
+     ****************************************/
+    public Handler postCreateUiInit = new Handler(){
+    	public void handleMessage(Message msg){
+    		getAlbums(false);
+    	}
+    };
+    
+    /****************************************
+     * 
+     * Play Song Wrapper
+     * 
+     ****************************************/
+    public void playSong(int albumIndex, int songIndex){
+		try{
+	    	playerServiceIface.play(albumIndex, songIndex);
+			albumCursorPositionPlaying = albumIndex; // probably redundant -- need to check
+			currentAlbumPosition = albumIndex;
+			currentSongPosition = songIndex;
+		} catch(Exception e){
+			e.printStackTrace();
+		}
+    }
+    
+    /****************************************
+     * 
+     * Trigger Album Fetching
+     * 
+     ****************************************/
     public void triggerAlbumArtFetching(){
     	albumReloadProgressDialog = new ProgressDialog(this);
     	albumReloadProgressDialog.setIcon(R.drawable.ic_menu_music_library);
@@ -717,26 +741,78 @@ public class Filex extends Activity {
         //albumArtThread.setUncaughtExceptionHandler(albumArtUncaughtExceptionHandler);
         albumArtThread.start();
     }
-    
-//    Thread.UncaughtExceptionHandler albumArtUncaughtExceptionHandler = new UncaughtExceptionHandler(){
-//
-//		@Override
-//		public void uncaughtException(Thread thread, Throwable ex) {
-//			Log.i("UNCAUGHT", ex.getLocalizedMessage());
-//		}
-//    	
-//    };
-    
-//    /*******************************************
-//     * 
-//     * onTerminate
-//     * 
-//     *******************************************/
-//    @Override
-//    public void onTerminate(){
-//    	
-//    }
-    
+
+    /*********************************************
+     * 
+     * hanldeNewVersionBoot
+     * 
+     *********************************************/
+    public void handleNewVersionBoot(){
+	   		
+	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putLong("Version", VERSION);
+	   		
+	   		/*
+	   		 * Clear previous Album Art
+	   		 */
+	   		Builder aD = new AlertDialog.Builder(context);
+	   		aD.setTitle("New Version");
+	   		aD.setMessage("The new version of RockOn supports album art download from higher quality sources. Do you want to download art now? " +
+	   				"Every 10 albums will take aproximately 1 minute to download. " +
+	   				"(You can always do this later by choosing the 'Get Art' menu option)");
+	   		aD.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+	
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+		   	   		//(new RockOnPreferenceManager(FILEX_PREFERENCES_PATH)).putLong("artImportDate", 0);
+		   	   		try{
+			   	   		File albumArtDir = new File(FILEX_ALBUM_ART_PATH);
+			   	   		String[] fileList = albumArtDir.list();
+			   	   		File albumArtFile;
+			   	   		for(int i = 0; i< fileList.length; i++){
+			   	   			albumArtFile = new File(albumArtDir.getAbsolutePath()+"/"+fileList[i]);
+			   	   			albumArtFile.delete();
+			   	   		}
+			   	   		checkAlbumArtDirectory();
+			   	   		triggerAlbumArtFetching();
+		   	   		}catch(Exception e){
+		   	   			e.printStackTrace();
+		   	   		}
+				}
+	   			
+	   		});
+
+	   		aD.setNegativeButton("No", new DialogInterface.OnClickListener(){
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+				
+				}
+	   			
+	   		});
+
+	   		aD.show();
+	   		
+	   		/*
+	   		 * Version 2 specific default preference changes
+	   		 */
+	   		// version 2 specific
+	   	   	if(albumCursor.getCount() > 10000)
+	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, false);
+	   	   	else
+	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
+	   		
+	   		readPreferences();
+	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
+	   		albumAdapter.showFrame = showFrame;
+			//
+	   		
+	   		/*
+	   		 * Show help screen
+	   		 */
+	   		this.hideMainUI();
+	   		this.showHelpUI();
+    }
+      
     /*******************************************
      * 
      * On Resume
@@ -1206,15 +1282,6 @@ public class Filex extends Activity {
         	/*
         	 * Get the views and make them visible
         	 */
-//        	this.showPlaylistUI();
-//        	this.hideMainUI();
-////        	ViewGroup playlistContainer = (ViewGroup) findViewById(R.id.playlist_listview_container);
-////        	TextView playlistTextHint = (TextView) findViewById(R.id.playlist_listhint);
-//        	ListView playlistView = (ListView) findViewById(R.id.playlist_listview);
-////        	playlistContainer.setVisibility(View.VISIBLE);
-////        	playlistTextHint.setVisibility(View.VISIBLE);
-////        	playlistAllSpinner.setVisibility(View.VISIBLE);
-//        		//new ListView(this.getApplicationContext());
         	String sortOrder = MediaStore.Audio.Playlists.NAME+" ASC";
         	Cursor playlistAllCursor = contentResolver.query(MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI,
         														this.PLAYLIST_COLS, 
@@ -1248,15 +1315,6 @@ public class Filex extends Activity {
         		Log.i("PLAYLIST MENU", playlistTemp.id+" "+playlistTemp.name);
         	}
         	
-//        	String[] fieldsFrom = new String[1];
-//    		int[]	fieldsTo = new int[1];
-//        	fieldsFrom[0] = MediaStore.Audio.Playlists.NAME;
-//    		fieldsTo[0] = R.id.playlist_name;
-//        	PlaylistCursorAdapter playlistAllAdapter = new PlaylistCursorAdapter(this.getApplicationContext(),
-//        																			R.layout.playlist_item, 
-//        																			playlistAllCursor, 
-//        																			fieldsFrom, 
-//        																			fieldsTo);
         	PlaylistArrayAdapter playlistAllAdapter = new PlaylistArrayAdapter(getApplicationContext(),
         																		R.layout.playlist_item,
         																		playlistArray);
@@ -1270,19 +1328,6 @@ public class Filex extends Activity {
     		aD.setAdapter(playlistAllAdapter, playlistDialogClickListener);
     		aD.show();
         	
-//        	playlistView.setAdapter(playlistAllAdapter);
-//        	
-//        	playlistView.setOnItemClickListener(playlistItemClickListener);
-        	
-//        	/*
-//        	 * Animate scroll up of the listview
-//        	 */
-//        	TranslateAnimation slideUp = new TranslateAnimation(0,0,display.getHeight(),0);
-//        	slideUp.setFillAfter(true);
-//        	slideUp.setDuration(250);
-//        	playlistContainer.startAnimation(slideUp);
-//        	
-        	//this.mainUIContainer.addView(playlistAllSpinner);
         	return true;
         /*
          * Preferences
@@ -1295,7 +1340,6 @@ public class Filex extends Activity {
         	
         	Intent i = new Intent();
         	i.setClass(getApplicationContext(), RockOnSettings.class);
-//           	this.recentPlaylistPeriod = getSharedPreferences(PREFS_NAME, 0)
            	(new RockOnPreferenceManager(FILEX_PREFERENCES_PATH))
         		.getInt(new Constants().PREF_KEY_RECENT_PERIOD, new Constants().RECENT_PERIOD_DEFAULT_IN_DAYS);
         	startActivityForResult(i,	new Constants().PREFERENCES_REQUEST);
@@ -1781,8 +1825,12 @@ public class Filex extends Activity {
      *
      *********************************************/
     public void getCurrentPlaying(){
-    	//if(true) return;
     	
+    	if(true)
+    		return;
+    	
+    	Log.i("STARTUP100", System.currentTimeMillis() - logTime + "msec");
+        
     	/*
     	 * ask the player service if/what he is playing
     	 */
@@ -1794,38 +1842,11 @@ public class Filex extends Activity {
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		
+		Log.i("STARTUP101", System.currentTimeMillis() - logTime + "msec");
+		
 		if(albumCursorPosition == -1 || songCursorPosition == -1){
-//			Log.i("GETCURPLAY", "BOTH CURSORS ARE -1");
-//			try{
-//				Random rand = new Random();
-//				if(albumCursor != null && rand != null)
-//					albumCursorPosition = rand.nextInt(albumCursor.getCount()-1);
-//				else
-//					albumCursorPosition = 1;
-//				albumCursorPositionPlaying = albumCursorPosition;
-//				songCursorPosition = 0;
-//			} catch (Exception e) {
-//				try{
-//					if(albumCursor != null)
-//						Log.i("EXCP", ""+albumCursor.getCount());
-//				} catch (Exception ee){
-//					ee.printStackTrace();
-//				}
-//				e.printStackTrace();
-//				albumCursorPosition = 0;
-//				albumCursorPositionPlaying = albumCursorPosition;
-//				songCursorPosition = 0;
-//			}
-//			try {
-//				playerServiceIface.setAlbumCursorPosition(albumCursorPosition);
-//				playerServiceIface.setSongCursorPosition(songCursorPosition);
-//				playerServiceIface.play(albumCursorPosition, songCursorPosition);
-//				playerServiceIface.pause();
-//				// HACKzzzzzzzzz we need a paused event from the service
-//				this.stopSongProgress();
-//			} catch (RemoteException e) {
-//				e.printStackTrace();
-//			}
+
     	} else {
     		try {
 				if(playerServiceIface.isPlaying()){
@@ -1839,26 +1860,21 @@ public class Filex extends Activity {
 					songCursorPosition = playerServiceIface.getSongCursorPosition();
 					albumCursorPositionPlaying = albumCursorPosition;
 
-//					Log.i("INIT", albumCursorPosition+" "+songCursorPosition);
-//					playerServiceIface.play(albumCursorPositionPlaying,
-//											songCursorPosition);
-//					playerServiceIface.pause();
 					this.stopSongProgress();
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
     	}
-		// TODO: ask if he is playing
+
+		Log.i("STARTUP102", System.currentTimeMillis() - logTime + "msec");
+		
 		/*
 		 * If media Library is empty just show a popup
 		 */
 		if(albumCursor.getCount() == 0){
 			Dialog noMediaDialog = new Dialog(this);
 			noMediaDialog.setTitle("No Media Available");
-			//TextView noMediaText = new TextView(this);
-			//noMediaText.setText("Please add some Music to your SD Card");
-			//noMediaDialog.setContentView(noMediaText);
 			noMediaDialog.show();
 			return;
 		}
@@ -1867,7 +1883,7 @@ public class Filex extends Activity {
 		 * Go to the current playing Media
 		 */
 		Log.i("GETCURPLAY", "MOVING CURSORS");
-
+		
 		try{
 			albumCursor.moveToPosition(albumCursorPosition);
 			albumCursorPositionPlaying = albumCursorPosition;
@@ -1880,56 +1896,9 @@ public class Filex extends Activity {
 		}
 		
 		Log.i("GETCURPLAY", "GET ALBUM ART");
-
-		try{
-//			/*
-//			 * get albumArt
-//			 */
-//			String albumCoverPath = albumCursor.getString(
-//										albumCursor.getColumnIndexOrThrow(
-//											MediaStore.Audio.Albums.ALBUM_ART));
-//	    	// if it does not exist in database look for our dir
-//	    	if(albumCoverPath == null){
-//	    		String artistName = albumCursor.getString(
-//										albumCursor.getColumnIndexOrThrow(
-//												MediaStore.Audio.Albums.ARTIST));
-//	    		String albumName = albumCursor.getString(
-//										albumCursor.getColumnIndexOrThrow(
-//												MediaStore.Audio.Albums.ALBUM));
-//	    		String path = this.FILEX_ALBUM_ART_PATH+
-//	    						validateFileName(artistName)+
-//								" - "+
-//								validateFileName(albumName)+
-//								FILEX_FILENAME_EXTENSION;
-//	    		File albumCoverFilePath = new File(path);
-//				if(albumCoverFilePath.exists() && albumCoverFilePath.length() > 0){
-//					albumCoverPath = path;
-//				}
-//	    	}
-//	    	
-//	    	Log.i("GETCURPLAY", "UPDATING UI COMPONENT");
-//
-// 	    	/*
-//	    	 * Update currentPlaying albumArt UI component
-//	    	 */
-//			if(albumCoverPath != null){
-//				// TODO:
-//				// adjust sample size
-//				Options opts = new Options();
-//				opts.inSampleSize = 1;
-//				Bitmap albumCoverBitmap = BitmapFactory.decodeFile(albumCoverPath, opts);
-//				this.currentAlbumPlayingImageView.setImageBitmap(albumCoverBitmap);
-//			} else {
-//				// TODO:
-//				// adjust sample size dynamically
-//				Options opts = new Options();
-//				opts.inSampleSize = 1;
-//				Bitmap albumCoverBitmap = BitmapFactory.decodeResource(this.context.getResources(),
-//																R.drawable.albumart_mp_unknown, opts);
-//				if(albumCoverBitmap != null)
-//					this.currentAlbumPlayingImageView.setImageBitmap(albumCoverBitmap);
-//			}
-			
+		Log.i("STARTUP103", System.currentTimeMillis() - logTime + "msec");
+        		
+		try{			
 			if(VIEW_STATE == FULLSCREEN_VIEW)
 				this.currentAlbumPlayingImageView.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_FULLSCREEN));
 			else
@@ -1982,6 +1951,9 @@ public class Filex extends Activity {
     	} catch (Exception e) {
     		e.printStackTrace();
     	}
+    	
+    	Log.i("STARTUP20000", System.currentTimeMillis() - logTime + "msec");
+        
     }
     
 	/*********************************************
@@ -1990,10 +1962,10 @@ public class Filex extends Activity {
 	 *  
 	 *********************************************/
     public void getAlbums(boolean force){
-    	/*
-    	 * Query the phone database for albums
-    	 */
-		initializeAlbumCursor();
+    	
+    	Log.i("STARTUP10-1", System.currentTimeMillis() - logTime + "msec");
+		
+		Log.i("STARTUP10-2", System.currentTimeMillis() - logTime + "msec");
 		
 		/*
 		 * Create Album Navigator
@@ -2003,6 +1975,8 @@ public class Filex extends Activity {
 		fieldsFrom[0] = MediaStore.Audio.Albums.ALBUM_ART;
 		fieldsTo[0] = R.id.navigator_albumart_image;
 		
+		Log.i("STARTUP10-3", System.currentTimeMillis() - logTime + "msec");
+        
 		/*
 		 * Allocate Cache if needed
 		 */
@@ -2010,6 +1984,8 @@ public class Filex extends Activity {
 			albumImages = new Bitmap[MAX_IMAGES_IN_CACHE+1];
 			albumImagesIndexes = new int[MAX_IMAGES_IN_CACHE+1];
 		}
+		
+		Log.i("STARTUP10-4", System.currentTimeMillis() - logTime + "msec");
 		
 		/*
 		 * Create adapter (receives the cache vectors, the cursor, and other params)
@@ -2033,68 +2009,114 @@ public class Filex extends Activity {
 			albumAdapter.reloadNavigatorWidth();
 		}
 		
+		Log.i("STARTUP10-5", System.currentTimeMillis() - logTime + "msec");
+        
+		
 		// seems redundant
 		//albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
 		albumAdapter.showFrame = showFrame;
 		
-		/*
-		 * schedule Image Caching within X secs
-		 *  - this way it does not hurt the app startup 
-		 */
-		if(this.albumImages == null){
-			cacheImageHandler.postDelayed(
-					new Runnable(){
-						@Override
-						public void run() {
-							cacheImages(albumNavigatorList.getFirstVisiblePosition());
-						}
-					},
-					2000);
-		}
-		
-//		if(albumImages == null || force){
-//			if(albumCursor.getCount() < albumAdapter.AVOID_PRELOAD_THRESHOLD){
-//				try{
-//					for(int i=0; i<albumCursor.getCount(); i++){
-//						if(albumImages[i] != null)
-//							albumImages[i].recycle();
-//					}
-//				}catch (Exception e){
-//					e.printStackTrace();
-//				}
-//				albumImages = new Bitmap[albumCursor.getCount()];
-//				albumImagesIndexes = new int[albumCursor.getCount()];
-//				for(int i=0; i<albumCursor.getCount(); i++){
-//					albumImages[i]=albumAdapter.getAlbumBitmap(
-//							i, 
-//							albumAdapter.BITMAP_SIZE_XSMALL);
-//				}
-//				albumAdapter.albumImages = albumImages;
-//				albumNavigatorList.setSelection(
-//						albumNavigatorList.getSelectedItemPosition());
-//			}
+//		/*
+//		 * schedule Image Caching within X secs
+//		 *  - this way it does not hurt the app startup 
+//		 */
+//		if(this.albumImages == null){
+//			cacheImageHandler.postDelayed(
+//					new Runnable(){
+//						@Override
+//						public void run() {
+//							cacheImages(albumNavigatorList.getFirstVisiblePosition());
+//						}
+//					},
+//					2000);
 //		}
+		
+		Log.i("STARTUP10-6", System.currentTimeMillis() - logTime + "msec");
+       
+		
 		
 		/*
 		 * Assign the adapter to the album list
 		 */
 		this.albumNavigatorList.setAdapter(albumAdapter);
+		
+		/*
+		 * Hide the list
+		 */
+//		TranslateAnimation tAnim = new TranslateAnimation(500.f, 500.f, 0.f, 0.f);
+//		tAnim.setFillAfter(true);
+//		tAnim.setDuration(1);
+//		this.albumNavigatorList.startAnimation(tAnim);
+		this.albumNavigatorList.setVisibility(View.GONE);
+		
+		Log.i("STARTUP10-7", System.currentTimeMillis() - logTime + "msec");
+        
 		/*
 		 * Attach the scroll listener to the album list (we need to update the cache everytime the user stops scrolling)
 		 */
-		this.albumNavigatorScrollListener.onScrollStateChanged(this.albumNavigatorList, OnScrollListener.SCROLL_STATE_IDLE);
-		
-		// No albums
-		if(albumCursor == null)
-			return;
+//		this.albumNavigatorScrollListener.onScrollStateChanged(this.albumNavigatorList, OnScrollListener.SCROLL_STATE_IDLE);
 		
 		/*
-		 * Initialize the song and artist cursors
+		 * Set List Position
 		 */
-		songCursor = initializeSongCursor(null);
-		initializeArtistCursor();
+		this.albumNavigatorList.setSelection(currentAlbumPosition);
+
+		/* 
+		 * Refresh the Visible List
+		 * 	 -in case the bitmaps in this 'area' are not cached
+		 * 		 call manual population of the list views 
+		 */
+		
+		/*
+		 *  Set up slideIn animation
+		 */
+		(new Handler()).postDelayed(
+				new Runnable(){
+					@Override
+					public void run() {
+						Log.i("STARTUP10-666", System.currentTimeMillis() - logTime + "msec");
+					       
+						
+						/* refresh the views in case the cache does not have this area */
+						albumAdapter.albumImagesCenter = currentAlbumPosition;
+						for(int i = 0; i < 6 ; i++){
+								albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
+										currentAlbumPosition + i, 
+										BITMAP_SIZE_SMALL);
+								albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = currentAlbumPosition + i;
+						}
+						
+						Log.i("STARTUP10-667", System.currentTimeMillis() - logTime + "msec");
+					    
+						
+						////////// refreshVisibleList(albumNavigatorList); // in case the bitmaps of this area are not cached
+						////////// STILL MISSING
+						////////// SHOLD SET UP THE RELEVANT CACHE MANUALLY
+						/* animate appearance */
+						TranslateAnimation tAnim = new TranslateAnimation(200.f, 0.f, 0.f, 0.f);
+						tAnim.setDuration(250);
+						albumNavigatorLayoutOuter.startAnimation(tAnim);
+						/* enable the list */
+						albumNavigatorList.setVisibility(View.VISIBLE);
+						
+						Log.i("STARTUP10-668", System.currentTimeMillis() - logTime + "msec");
+					    
+					}
+				}, 
+				250);
+		
+		(new Handler()).postDelayed(
+				new Runnable(){
+					@Override
+					public void run() {
+						imageCachingLaunchThread(albumNavigatorList.getFirstVisiblePosition());
+					}
+				}, 
+				2000);
+		
+		Log.i("STARTUP10-8", System.currentTimeMillis() - logTime + "msec");		
+        
     }
-    
     
     /*
      * Image Caching Handler
@@ -2122,10 +2144,14 @@ public class Filex extends Activity {
     	imageCachingThread.start();
     }
     
+    /*
+     * Some caching global variables
+     */
     static Bitmap[] albumImages = null;
     static int[]	albumImagesIndexes = null;
     final  int		MAX_IMAGES_IN_CACHE = 56;
     final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
+    
     /*
      * Image Caching
      */
@@ -2145,7 +2171,7 @@ public class Filex extends Activity {
 	    		if(albumListIsScrolling)
 	    			return;
 	    		
-	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
+//	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
 	    		
 	    		/* Negative */
 	    		if(center - i > 0 &&
@@ -2156,7 +2182,7 @@ public class Filex extends Activity {
 	    			
 	    		}
 	    		
-	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + "(center is " + center +")"); 
+//	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + "(center is " + center +")"); 
 	    	
 	    		/*
 	    		 * Check if List started to scroll
@@ -2192,7 +2218,7 @@ public class Filex extends Activity {
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
     				center - i > 0){
     			
-    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
+//    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
     			
 				albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
 									center - i, 
@@ -2210,7 +2236,7 @@ public class Filex extends Activity {
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
     				i != 0){
     			
-    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
+//    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
     			
     			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
 									center + i, 
@@ -2235,7 +2261,6 @@ public class Filex extends Activity {
     	Cursor newCursor;
 		try{
 	    	Log.i("DBG", "Initializing Album Cursor - playlist - "+playlist);
-	//		playlist = this.getSharedPreferences(this.PREFS_NAME, 0).getLong(constants.PREF_KEY_PLAYLIST, constants.PLAYLIST_ALL);
 	    	if(playlist == constants.PLAYLIST_ALL){
 		    	String sortClause = MediaStore.Audio.Albums.ARTIST+" ASC";
 		    	newCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
@@ -2246,7 +2271,6 @@ public class Filex extends Activity {
 						);
 	    	} else if(playlist == constants.PLAYLIST_RECENT){
 	        	RockOnPreferenceManager prefs = new RockOnPreferenceManager(FILEX_PREFERENCES_PATH);
-	//    		double period = getSharedPreferences(PREFS_NAME, 0)
 	        	double period = prefs
 	    							.getInt(constants.PREF_KEY_RECENT_PERIOD, constants.RECENT_PERIOD_DEFAULT_IN_DAYS) * 24 * 60 * 60;
 	    		String whereClause = MediaStore.Audio.Media.DATE_ADDED +">" + (System.currentTimeMillis()/1000 - period);
@@ -2275,7 +2299,6 @@ public class Filex extends Activity {
 									"\"";
 	
 		    		lastAlbumKey = songCursor.getString(songCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_KEY));
-		    		//Log.i("PLAYLIST_RECENT", songCursor.getDouble(songCursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED))+" > "+ (System.currentTimeMillis()/1000 - period));
 		    	}
 		    	sortOrder = MediaStore.Audio.Albums.ARTIST+" ASC";
 		    	newCursor = contentResolver.query(MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
@@ -2339,20 +2362,13 @@ public class Filex extends Activity {
 			e.printStackTrace();
 			return null;
 		}
-		
-//    	/*************DBG********************************/
-//    	initializeAlbumCursorFromPlaylist();
     }
+
+    /*
+     * Initializes a song cursor given an album name 
+     * 	... should be album key right???
+     */
     public Cursor	initializeSongCursor(String albumName){
-//    	//playlist=1;
-//    	if(albumName == null){
-//	    	songCursor = contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-//					SONG_COLS, // we should minimize the number of columns
-//					null,	// all songs
-//					null,   // parameters to the previous parameter - which is null also 
-//					null	// sort order, SQLite-like
-//					);
-//    	} else {
     	try{
 			String whereClause = null;
 			if(playlist == constants.PLAYLIST_ALL){
@@ -2397,7 +2413,6 @@ public class Filex extends Activity {
 						);
 		    	whereClause = MediaStore.Audio.Media.ALBUM + "=\""+
 		    		albumName.replaceAll("\"", "\"\"") + "\"";
-	//    	    	String lastAlbumKey = "";
 		    	while(playlistCursor.moveToNext()){
 	//    	    		if(playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members.ALBUM_KEY)).equals(lastAlbumKey)){
 	//    	    			lastAlbumKey = playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members.ALBUM_KEY));
@@ -2413,14 +2428,11 @@ public class Filex extends Activity {
 													MediaStore.Audio.Playlists.Members.TITLE_KEY))
 											.replaceAll("\"", "\"\"")+
 									"\"";
-	
-	//    	    		lastAlbumKey = playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members.ALBUM_KEY));
-	
-		    		Log.i("DBG", "Album - "+playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members.TITLE_KEY)));
+		
+//		    		Log.i("DBG", "Album - "+playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.Members.TITLE_KEY)));
 		    	}
 		    	
 		    	String sortClause = MediaStore.Audio.Media.TRACK+" ASC";
-		    	//String sortClause = null;
 		    	Log.i("SONGSEARCH", whereClause);
 		    	return contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
 		    						SONG_COLS, 		// we should minimize the number of columns
@@ -2434,28 +2446,11 @@ public class Filex extends Activity {
     		e.printStackTrace();
     		return songCursor;
     	}
-//    	}
-    }
-    public void	initializeArtistCursor(){
-    	
-    }
-    
-    public void initializeAlbumCursorFromPlaylist(){
-//    	Cursor	playlistCursor;
-//    	playlistCursor = contentResolver.query(MediaStore.Audio.Playlists.EXTERNAL_CONTENT_URI,
-//    											PLAYLIST_COLS,
-//    											null,
-//    											null,
-//    											MediaStore.Audio.Playlists.DEFAULT_SORT_ORDER);
-//    	while(playlistCursor.moveToNext()){
-//    		Log.i("PLAYLIST", MediaStore.Audio.Playlists.DATA + playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.DATA)) +
-//    				MediaStore.Audio.Playlists.DATE_ADDED + playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.DATE_ADDED))+
-//    				MediaStore.Audio.Playlists.DATE_MODIFIED + playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.DATE_MODIFIED))+
-//    				MediaStore.Audio.Playlists.NAME + playlistCursor.getString(playlistCursor.getColumnIndexOrThrow(MediaStore.Audio.Playlists.NAME)));
-//    		
-//    	}
     }
 
+    /*
+     * Handler to invalidate the current song UI Area
+     */
     Handler	invalidateCurrentSongLayout = new Handler(){
     	public void handleMessage(Message msg){
     		if(currentPlayingSongContainer != null)
@@ -2463,6 +2458,9 @@ public class Filex extends Activity {
     	}
     };
     
+    /*
+     * Handler to invalidate the current playing UI Area
+     */
     Handler	invalidateCurrentPlayingImageView = new Handler(){
     	public void handleMessage(Message msg){
     		if(currentPlayingLayout != null)
@@ -3064,21 +3062,8 @@ public class Filex extends Activity {
 			/*
 			 * Play song
 			 */
-			try
-			{
-//				((Filex) context).playerServiceIface.play(((Filex) context).albumCursorPositionPlaying,
-//						songCursor.getPosition());	
-				playerServiceIface.play(albumNavigatorItemLongClickIndex,
-								position);
-				
-				/*
-				 * Update some vars
-				 */
-				albumCursorPositionPlaying = albumNavigatorItemLongClickIndex;
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-    		
+			playSong(albumNavigatorItemLongClickIndex, position);
+			    		
 			/*
 			 * Some more UI
 			 */
@@ -3299,11 +3284,7 @@ public class Filex extends Activity {
 				/*
 				 * Play Song
 				 */
-				try {
-					playerServiceIface.play(albumIndex, songIndex);
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
+				playSong(albumIndex, songIndex);
 				
 				/*
 				 * Change Album and song text
@@ -3560,7 +3541,7 @@ public class Filex extends Activity {
 					refreshVisibleList(view);
 				}
 				
-				Log.i("SCROLLIDLE", "Will start CACHING");
+				Log.i("SCROLLIDLE", "Will start CACHING for center " + view.getFirstVisiblePosition());
 				/*
 				 * Cache new images in range
 				 */
@@ -3713,9 +3694,14 @@ public class Filex extends Activity {
      * Refresh the Visible Part of the Album List
      */
     public void refreshVisibleList(AbsListView view){
+    	/*
+    	 * Get the range of the visible views
+    	 */
 		int i = view.getFirstVisiblePosition();
 		int count = view.getChildCount();
+		Log.i("REFRESHINGLIST", "first "+i+" nviews "+count);
 		for(int j = 0; j < count; j++){
+			Log.i("REFRESHINGLIST", "index "+(i+j));
 			View v = view.getChildAt(j);
 			/*
 			 * Reload ImageView
@@ -3826,24 +3812,6 @@ public class Filex extends Activity {
 		}
 	};
 	
-//	OnClickListener songNameClickListenerOld = new OnClickListener(){
-//		@Override
-//		public void onClick(View v) {
-//			try {
-//	    		/* In case the album is paused */
-//	    		AlphaAnimation	fadeIn = new AlphaAnimation((float)1.0,(float)1.0);
-//	    		fadeIn.setFillAfter(true);
-//	    		fadeIn.setDuration(1);
-//	    		currentAlbumPlayingLayout.startAnimation(fadeIn);
-//	    		
-//	    		/* Play next song */
-//				playerServiceIface.playNext();
-//			} catch (RemoteException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//	};
-	
 	OnLongClickListener songNameLongClickListener = new OnLongClickListener(){
 		@Override
 		public boolean onLongClick(View v) {
@@ -3856,37 +3824,34 @@ public class Filex extends Activity {
 	OnClickListener	artistNameClickListener = new OnClickListener(){
 		@Override
 		public void onClick(View v) {
-			Log.i("WebV","0");
-			if (true)
-				return;
+//			if (true)
+//				return;
 
 //			WebView webView = new WebView(context);
 //			Log.i("WebV","1");
 //			webView.setLayoutParams(new RelativeLayout.LayoutParams(
 //											RelativeLayout.LayoutParams.FILL_PARENT,
 //											RelativeLayout.LayoutParams.FILL_PARENT));
-			Log.i("WebV","2");
-			webView.setWebViewClient(
-	        		new WebViewClient() {
-	        			@Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
-	        				return false;
-	        			}
-	        		});
-			Log.i("WebV","3");
-			String LAST_FM_BASE_URL = "http://www.last.fm/music/";
+
+//			webView.setWebViewClient(
+//	        		new WebViewClient() {
+//	        			@Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+//	        				return false;
+//	        			}
+//	        		});
+
+//			String LAST_FM_BASE_URL = "http://www.last.fm/music/";
 //			String artistName = albumCursor.getString(
 //									albumCursor.getColumnIndexOrThrow(
 //										MediaStore.Audio.Albums.ARTIST));
-			webView.loadUrl(LAST_FM_BASE_URL+URLEncoder.encode((String) artistNameText.getText()));
+//			webView.loadUrl(LAST_FM_BASE_URL+URLEncoder.encode((String) artistNameText.getText()));
 			//webView.loadUrl("http://www.youtube.com/results?search_type=&search_query=Mars+volta&aq=f");
-			Log.i("WebV","4");
 			
 //			containerLayout.addView(webView);
-			System.gc();
-			showWebUI();
-			hideMainUI();
-			containerLayout.bringChildToFront(webView);			
-			Log.i("WebV","5");
+//			System.gc();
+//			showWebUI();
+//			hideMainUI();
+//			containerLayout.bringChildToFront(webView);			
 		}
 		
 	};
@@ -4644,7 +4609,6 @@ public class Filex extends Activity {
 
 		@Override
 		public void run() {
-
 			/*
 			 * Send order to service to play the first song of the requested album
 			 */
@@ -4652,8 +4616,8 @@ public class Filex extends Activity {
 				songCursor.moveToFirst();
 				albumCursorPositionPlaying = albumCursor.getPosition();
 
-				playerServiceIface.play(albumCursorPositionPlaying, songCursor.getPosition());
-
+				playSong(albumCursorPositionPlaying, songCursor.getPosition());
+				
 				if (songProgressTimer != null)
 					songProgressTimer.cancel();
 				songDuration = songCursor.getDouble(
@@ -4662,6 +4626,7 @@ public class Filex extends Activity {
 				songCurrentPosition = 0;
 				songProgressBar.setProgress(0);
 				songProgressBar.setMax((int) songDuration);
+				
 				runOnUiThread(new Runnable(){
 					@Override
 					public void run() {
@@ -4669,11 +4634,6 @@ public class Filex extends Activity {
 						triggerSongProgress();
 					}						
 				});
-				//currentPlayingLayout.invalidate();
-//				updateSongTextUI();
-//				triggerSongProgress();
-//				songProgressTimer = new Timer();
-//				songProgressTimer.scheduleAtFixedRate(new SongProgressTimerTask(), 100, 1000);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}			
@@ -4828,28 +4788,36 @@ public class Filex extends Activity {
 				duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds);
 				//duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds)+"''";
 			songDurationText.setText(duration);
-
+			
+			
 			/* 
 			 * Song Progress
 			 */
-			int songProgress = playerServiceIface.getPlayingPosition();
-			minutes = (int) Math.floor(songProgress/1000/60);
-			seconds = (int) Math.floor(songProgress/1000%60);
-			duration = null;
-			if(seconds > 9)
-				duration = String.valueOf(minutes)+"'"+String.valueOf(seconds);
-				//duration = String.valueOf(minutes)+"'"+String.valueOf(seconds)+"''";
-			else
-				duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds);
-				//duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds)+"''";
-			songDurationOngoingText.setText(duration);
-
+			int songProgress = 1;
+			if(playerServiceIface != null){
+				songProgress = playerServiceIface.getPlayingPosition();
+				if(songProgress < 1){
+					songProgress = 1;
+				}
+				minutes = (int) Math.floor(songProgress/1000/60);
+				seconds = (int) Math.floor(songProgress/1000%60);
+				duration = null;
+				if(seconds > 9)
+					duration = String.valueOf(minutes)+"'"+String.valueOf(seconds);
+					//duration = String.valueOf(minutes)+"'"+String.valueOf(seconds)+"''";
+				else
+					duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds);
+					//duration = String.valueOf(minutes)+"'0"+String.valueOf(seconds)+"''";
+				songDurationOngoingText.setText(duration);
+			} else {
+				songDurationOngoingText.setText("-'--");
+			}
+			
 			/* 
 			 * Progress Bar
 			 */
 			songProgressBar.setMax(songDuration);
 			songProgressBar.setProgress(songProgress);
-			
 			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -5660,6 +5628,25 @@ public class Filex extends Activity {
 		fileName = fileName.replace('|', '_');
 		return fileName;
 	}
+	
+	/********************************
+	 * 
+	 * dim & blur the BG
+	 *
+	 ********************************/
+	public void dimAndBlurBg(){
+		 // Have the system blur any windows behind this one.
+		 getWindow().setFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND,
+		      WindowManager.LayoutParams.FLAG_BLUR_BEHIND);
+		//getWindow().setFlags(WindowManager.LayoutParams.FLAG_DITHER, 
+		//		WindowManager.LayoutParams.FLAG_DITHER);
+		getWindow().setFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND, 
+				WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+		WindowManager.LayoutParams params = getWindow().getAttributes();
+		params.dimAmount = 0.625f;
+		getWindow().setAttributes(params);
+	}
+    
 	
 	/********************************
 	 * 
@@ -6484,9 +6471,6 @@ public class Filex extends Activity {
 	   
 	    context = null;
 	    contentResolver = null;
-	    albumCursor = null;
-	    songCursor = null;
-	    artistCursor = null;
 //	    public	int						albumCursorPositionPlaying = 0;
 //	    public 	boolean					SHUFFLE = false;
 	    playerServiceConn = null;
