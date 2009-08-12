@@ -37,47 +37,54 @@ public class MusicChangedIntentReceiver	extends BroadcastReceiver{
 				e.printStackTrace();
 			}
 			
-			/*
-			 * UpdateAlbumCursor
+			/* 
+			 * move (album)cursor to the new album 
 			 */
 			filex.albumCursor.moveToPosition(
 					filex.playerServiceIface.getAlbumCursorPosition());
 			
 			/*
-			 * Update Song Cursor
+			 * move (song)cursor to the new song
 			 */
-			filex.songCursor = filex.initializeSongCursor(
-					filex.albumCursor.getString(
-							filex.albumCursor.getColumnIndexOrThrow(
-									MediaStore.Audio.Albums.ALBUM)));
+			filex.songCursor = filex.initializeSongCursor(filex.albumCursor.getString(
+												filex.albumCursor.getColumnIndexOrThrow(
+														MediaStore.Audio.Albums.ALBUM)));
 			filex.songCursor.moveToPosition(
 					filex.playerServiceIface.getSongCursorPosition());
+
+			/*
+			 * Update status variables 
+			 */
+			filex.albumCursorPositionPlaying = filex.playerServiceIface.getAlbumCursorPosition();
+			filex.currentAlbumPosition = filex.playerServiceIface.getAlbumCursorPosition();
+			filex.currentSongPosition = filex.playerServiceIface.getSongCursorPosition();
 			
 			/*
-			 * Update Song UI
+			 * Update the song progress bar
 			 */
 			filex.songProgressBar.setProgress(0);
 			filex.songProgressBar.setMax((int) filex.songCursor.getDouble(
-												filex.songCursor.getColumnIndex(
+												filex.songCursor.getColumnIndexOrThrow(
 														MediaStore.Audio.Media.DURATION)));
+			/*
+			 * Update the song name (and artist too)
+			 */
 			filex.updateSongTextUI();
+			/*
+			 * Trigger song progress
+			 */
 			filex.triggerSongProgress();
 			
-			/*
-			 * playPauseButton
-			 */
-//			TransitionDrawable playPauseTDrawable = (TransitionDrawable) filex.playPauseImage.getDrawable();
-//			playPauseTDrawable.setCrossFadeEnabled(true);
-//			playPauseTDrawable.startTransition(1);
-//			playPauseTDrawable.invalidateSelf();
-		
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (CursorIndexOutOfBoundsException e){
 			e.printStackTrace();
 			
 			// TODO: Maybe resync service and frontend cursors....
-			
+			/*
+			 * Probably the service and front end cursors are not synchronized
+			 * 	- try to resynch
+			 */
 			try{
 				filex.initializeAlbumCursor();
 				filex.albumCursor.moveToNext();

@@ -274,8 +274,8 @@ public class Filex extends Activity {
     public	static	boolean				autoRotate;
 //    public	static 	Cursor				albumCursor = null;
 //    public	static	Cursor				songCursor = null;
-    public	static 	Cursor				albumCursor = null;
-    public	static	Cursor				songCursor = null;
+    public	Cursor						albumCursor = null;
+    public	Cursor						songCursor = null;
        
     
     
@@ -821,16 +821,6 @@ public class Filex extends Activity {
     public void onResume(){
     	super.onResume();
     	Log.i("RESUME", "RockOn Resuming...");
-//    	try {
-//			playerServiceIface.setPlaylist(
-//					getSharedPreferences(PREFS_NAME, 0)
-//						.getLong(constants.PREF_KEY_PLAYLIST, constants.PLAYLIST_ALL));
-//			playerServiceIface.setRecentPeriod(
-//	    			getSharedPreferences(PREFS_NAME, 0)
-//	    				.getInt(constants.PREF_KEY_RECENT_PERIOD, constants.RECENT_PERIOD_DEFAULT_IN_DAYS));
-//    	} catch (Exception e) {
-//    		e.printStackTrace();
-//   	}
     }
     
     /*******************************************
@@ -886,6 +876,25 @@ public class Filex extends Activity {
     	playerServiceIface = null;
     	
     	/*
+    	 * LastFM clean up
+    	 */
+    	if(lastFmEventImporter != null){
+    		this.lastFmEventImporter.eventLinkedListAdapter.clear();
+    		lastFmEventImporter = null;
+    	}
+    	
+    	/*
+    	 * Stop Timers
+    	 */
+    	if(songProgressTimer != null)
+    		songProgressTimer.cancel();
+    	
+    	/*
+    	 * Stop caching
+    	 */
+    	albumListIsScrolling = true;
+    	
+    	/*
     	 * Current Playing Album Art
     	 */
     	if(currentAlbumPlayingImageView != null){
@@ -920,19 +929,6 @@ public class Filex extends Activity {
 	    }
 	    //albumAdapter = null;
 	    
-    	/*
-    	 * LastFM clean up
-    	 */
-    	if(lastFmEventImporter != null){
-    		this.lastFmEventImporter.eventLinkedListAdapter.clear();
-    		lastFmEventImporter = null;
-    	}
-    	
-    	/*
-    	 * Stop Timers
-    	 */
-    	if(songProgressTimer != null)
-    		songProgressTimer.cancel();
     	
     	/*
     	 * Clean up all global vars
@@ -2038,6 +2034,9 @@ public class Filex extends Activity {
 		/*
 		 * Assign the adapter to the album list
 		 */
+		if(this.albumNavigatorList == null)
+//			this.albumNavigatorList = (ListView) findViewById(R.id.navigator_listview);
+			return;
 		this.albumNavigatorList.setAdapter(albumAdapter);
 		
 		/*
@@ -2074,33 +2073,36 @@ public class Filex extends Activity {
 				new Runnable(){
 					@Override
 					public void run() {
-						Log.i("STARTUP10-666", System.currentTimeMillis() - logTime + "msec");
-					       
-						
-						/* refresh the views in case the cache does not have this area */
-						albumAdapter.albumImagesCenter = currentAlbumPosition;
-						for(int i = 0; i < 6 ; i++){
-								albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
-										currentAlbumPosition + i, 
-										BITMAP_SIZE_SMALL);
-								albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = currentAlbumPosition + i;
+						try{
+							Log.i("STARTUP10-666", System.currentTimeMillis() - logTime + "msec");
+						       
+							
+							/* refresh the views in case the cache does not have this area */
+							albumAdapter.albumImagesCenter = currentAlbumPosition;
+							for(int i = 0; i < 6 ; i++){
+									albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
+											currentAlbumPosition + i, 
+											BITMAP_SIZE_SMALL);
+									albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = currentAlbumPosition + i;
+							}
+							
+							Log.i("STARTUP10-667", System.currentTimeMillis() - logTime + "msec");
+						    
+							
+							////////// refreshVisibleList(albumNavigatorList); // in case the bitmaps of this area are not cached
+							////////// STILL MISSING
+							////////// SHOULD SET UP THE RELEVANT CACHE MANUALLY
+							/* animate appearance */
+							TranslateAnimation tAnim = new TranslateAnimation(200.f, 0.f, 0.f, 0.f);
+							tAnim.setDuration(250);
+							albumNavigatorLayoutOuter.startAnimation(tAnim);
+							/* enable the list */
+							albumNavigatorList.setVisibility(View.VISIBLE);
+							
+							Log.i("STARTUP10-668", System.currentTimeMillis() - logTime + "msec");
+						}catch(Exception e){
+							e.printStackTrace();
 						}
-						
-						Log.i("STARTUP10-667", System.currentTimeMillis() - logTime + "msec");
-					    
-						
-						////////// refreshVisibleList(albumNavigatorList); // in case the bitmaps of this area are not cached
-						////////// STILL MISSING
-						////////// SHOLD SET UP THE RELEVANT CACHE MANUALLY
-						/* animate appearance */
-						TranslateAnimation tAnim = new TranslateAnimation(200.f, 0.f, 0.f, 0.f);
-						tAnim.setDuration(250);
-						albumNavigatorLayoutOuter.startAnimation(tAnim);
-						/* enable the list */
-						albumNavigatorList.setVisibility(View.VISIBLE);
-						
-						Log.i("STARTUP10-668", System.currentTimeMillis() - logTime + "msec");
-					    
 					}
 				}, 
 				250);
@@ -2109,7 +2111,11 @@ public class Filex extends Activity {
 				new Runnable(){
 					@Override
 					public void run() {
-						imageCachingLaunchThread(albumNavigatorList.getFirstVisiblePosition());
+						try{
+							imageCachingLaunchThread(albumNavigatorList.getFirstVisiblePosition());
+						} catch(Exception e){
+							e.printStackTrace();
+						}
 					}
 				}, 
 				2000);
@@ -2217,13 +2223,24 @@ public class Filex extends Activity {
     		/* Negative */
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
     				center - i > 0){
-    			
+
 //    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
     			
-				albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
+    			/* release image from memory*/    			
+    			if(albumImages[HALF_IMAGES_IN_CACHE - i] != null && 
+    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMax &&
+    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMin){
+        			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = -1; // avoids someone trying to use the recycled bitmap
+    				albumImages[HALF_IMAGES_IN_CACHE - i].recycle();
+    			}
+    			
+    			/* cache new image */
+    			albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
 									center - i, 
 									albumAdapter.BITMAP_SIZE_XSMALL);
-				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
+				
+    			/* update image index */
+    			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
     		}
     		
     		/*
@@ -2238,9 +2255,19 @@ public class Filex extends Activity {
     			
 //    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
     			
+    			/* release image from memory*/    			
+    			if(albumImages[HALF_IMAGES_IN_CACHE + i] != null && 
+    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMax &&
+    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMin){
+        			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = -1; // avoids someone trying to use the recycled bitmap
+    				albumImages[HALF_IMAGES_IN_CACHE + i].recycle();
+    			}
+    			/* cache new image */
     			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
 									center + i, 
 									albumAdapter.BITMAP_SIZE_XSMALL);
+    			
+    			/* update image index */
     			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
     		}
     	}
@@ -2955,59 +2982,99 @@ public class Filex extends Activity {
     	
     	@Override
     	public void	onItemClick(AdapterView<?> parent, View view, int position, long id){
+    		/* Need to stop the album caching thread */
+    		//// NEEDS TO HAVE ITS OWN VARIABLE
+    		albumListIsScrolling = true;
+    		
     		/*
     		 * Check if it is not the current Album
     		 */
     		// TODO
-    		
-    		/* set icon to pause */
-    		//playPauseImage.setImageResource(android.R.drawable.ic_media_pause);
-    		try {
-				if(!playerServiceIface.isPlaying()){
-					TransitionDrawable playPauseTDrawable = (TransitionDrawable) playPauseImage.getDrawable();
-					playPauseTDrawable.setCrossFadeEnabled(true);
-					playPauseTDrawable.startTransition(1);
-					playPauseTDrawable.invalidateSelf();
-				}
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-    		
-    		/*
-    		 * Stop current song
-    		 */
-    		try {
-				if(playerServiceIface.isPlaying()){
-					playerServiceIface.stop();
-				}
-				songProgressHandler.sendEmptyMessage(0);
-				if(songProgressTimer != null)
-					songProgressTimer.cancel();
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-    					
-    		/*
-    		 * Save albumCursor
-    		 */
-			// not required.......
-    		albumCursor = ((AlbumCursorAdapter) parent.getAdapter()).getCursor();
 
     		/*
-    		 * Hide the Current Album
-    		 *  - the listener of the animation will change the art
-    		 *  	and go to the next song
+    		 * Highlight the selected item
     		 */
-    		//currentAlbumPlayingLayout.startAnimation(hideLeft);
-    		//currentAlbumPlayingLayout.startAnimation(fadeAlbumOut);
-    		currentAlbumPlayingLayoutOuter.startAnimation(fadeAlbumOut);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 50);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 100);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 150);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 200);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 250);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 300);
-    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 350);
+    		RotateAnimation nodAnim = new RotateAnimation(0.f, 5.f, 60.f, 60.f);
+    		nodAnim.setDuration(250);
+    		view.startAnimation(nodAnim);    		
+
+    		(new Handler()).postDelayed(
+    				new Runnable(){
+    					public void run(){
+    						
+    			    		/* set icon to pause */
+    			    		//playPauseImage.setImageResource(android.R.drawable.ic_media_pause);
+    			    		try {
+    							if(!playerServiceIface.isPlaying()){
+    								TransitionDrawable playPauseTDrawable = (TransitionDrawable) playPauseImage.getDrawable();
+    								playPauseTDrawable.setCrossFadeEnabled(true);
+    								playPauseTDrawable.startTransition(1);
+    							}
+    						} catch (RemoteException e) {
+    							e.printStackTrace();
+    						}
+    			    		
+    			    		/*
+    			    		 * Stop current song
+    			    		 */
+    			    		try {
+    							if(playerServiceIface.isPlaying()){
+    								playerServiceIface.stop();
+    							}
+    							songProgressHandler.sendEmptyMessage(0);
+    							if(songProgressTimer != null)
+    								songProgressTimer.cancel();
+    						} catch (RemoteException e) {
+    							e.printStackTrace();
+    						}
+    			    					
+    			    		/*
+    			    		 * Save albumCursor
+    			    		 */
+    						// not required.......
+    			    		//albumCursor = ((AlbumCursorAdapter) parent.getAdapter()).getCursor();
+
+    			    		/*
+    			    		 * Hide the Current Album
+    			    		 *  - the listener of the animation will change the art
+    			    		 *  	and go to the next song
+    			    		 */    						
+				    		currentAlbumPlayingLayoutOuter.startAnimation(fadeAlbumOut);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 50);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 100);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 150);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 200);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 250);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 300);
+				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 350);
+    					}
+    				},
+    				500);
+
+//    		(new Handler()).postDelayed(
+//    				new Runnable(){
+//    					public void run(){
+//    			    		/*
+//    			    		 * Hide the Current Album
+//    			    		 *  - the listener of the animation will change the art
+//    			    		 *  	and go to the next song
+//    			    		 */    						
+//				    		currentAlbumPlayingLayoutOuter.startAnimation(fadeAlbumOut);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 50);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 100);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 150);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 200);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 250);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 300);
+//				    		invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 350);
+//    					}
+//    				},
+//    				6000);
+
+    		
+    		/* restoring the isScrolling value */
+    		//////// TODO: needs its own value
+    		albumListIsScrolling = false;
     	}
     		
     };

@@ -5,6 +5,7 @@ import org.abrantes.filex.utils.RockOnPreferenceManager;
 
 import android.content.ComponentName;
 import android.content.ServiceConnection;
+import android.graphics.drawable.TransitionDrawable;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
@@ -25,9 +26,33 @@ public class PlayerServiceConnection implements ServiceConnection{
 			return;
 		}
 		
+		/*
+		 * Get an interface object so we can talk with the service
+		 */
 		filex.playerServiceIface = PlayerServiceInterface.
 										Stub.
 											asInterface(service);
+		
+		/*
+		 * Update song progress + playPause button state
+		 */
+		try {
+			TransitionDrawable playPauseTDrawable = (TransitionDrawable) 
+				filex.playPauseImage.getDrawable();
+			if(filex.playerServiceIface.isPlaying()){
+				/* progress bar update */
+				filex.triggerSongProgress();
+				/* play/pause button */
+				playPauseTDrawable.startTransition(1);
+				playPauseTDrawable.setCrossFadeEnabled(true);
+			} else {
+				playPauseTDrawable.resetTransition();
+			}
+		} catch (RemoteException e2) {
+			e2.printStackTrace();
+		}
+
+		
 		
 		if(true)
 			return;

@@ -31,27 +31,53 @@ public class AlbumChangedIntentReceiver	extends BroadcastReceiver{
 				e.printStackTrace();
 			}
 			
+			/* 
+			 * move (album)cursor to the new album 
+			 */
 			filex.albumCursor.moveToPosition(
 					filex.playerServiceIface.getAlbumCursorPosition());
-    		filex.albumCursorPositionPlaying = filex.playerServiceIface.getAlbumCursorPosition();
-
+			
+			/*
+			 * move (song)cursor to the new song
+			 */
 			filex.songCursor = filex.initializeSongCursor(filex.albumCursor.getString(
 												filex.albumCursor.getColumnIndexOrThrow(
 														MediaStore.Audio.Albums.ALBUM)));
 			filex.songCursor.moveToPosition(
 					filex.playerServiceIface.getSongCursorPosition());
 
+			/*
+			 * Update status variables 
+			 */
+			filex.albumCursorPositionPlaying = filex.playerServiceIface.getAlbumCursorPosition();
+			filex.currentAlbumPosition = filex.playerServiceIface.getAlbumCursorPosition();
+			filex.currentSongPosition = filex.playerServiceIface.getSongCursorPosition();
+			
+			/*
+			 * Update the song progress bar
+			 */
 			filex.songProgressBar.setProgress(0);
 			filex.songProgressBar.setMax((int) filex.songCursor.getDouble(
 												filex.songCursor.getColumnIndexOrThrow(
 														MediaStore.Audio.Media.DURATION)));
 			
+			/* to know whether this song change is being called 
+			 * by the service or explicit user input
+			 */
 			filex.calledByService = true;
 			
-			Message msg = new Message();
-			msg.obj = filex;
+//			Message msg = new Message();
+//			msg.obj = filex;
 //			animationStarterHandler.sendMessageDelayed(msg, 100);
+			
+			/*
+			 * Start the album fade out animation
+			 * 	- album fade in is automatically started at the end of this animation
+			 */
     		filex.currentAlbumPlayingLayoutOuter.startAnimation(filex.fadeAlbumOut);
+    		/*
+    		 * These calls are to ensure that the (whole) UI screen is refreshed
+    		 */
     		filex.invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 50);
     		filex.invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 100);
     		filex.invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 150);
@@ -60,19 +86,9 @@ public class AlbumChangedIntentReceiver	extends BroadcastReceiver{
     		filex.invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 300);
     		filex.invalidateCurrentPlayingImageView.sendEmptyMessageDelayed(0, 350);
     		
-			/*
-			 * playPauseButton
-			 */
-//			TransitionDrawable playPauseTDrawable = (TransitionDrawable) filex.playPauseImage.getDrawable();
-//			playPauseTDrawable.setCrossFadeEnabled(true);
-//			playPauseTDrawable.startTransition(1);
-//			playPauseTDrawable.invalidateSelf();
-
-    		
-//			filex.updateSongTextUI();
-//			filex.updateArtistTextUI();
-    		
-//			filex.updateSongTextUI();
+    		/*
+    		 * Trigger Song Progress
+    		 */
 			filex.triggerSongProgress();
 			
 		} catch (Exception e) {
@@ -80,13 +96,13 @@ public class AlbumChangedIntentReceiver	extends BroadcastReceiver{
 		}
 	}
 	
-	Handler animationStarterHandler = new Handler(){
-		@Override
-		public void handleMessage(Message msg){
-			Filex filex = (Filex) msg.obj;
-    		filex.currentAlbumPlayingLayoutOuter.startAnimation(filex.fadeAlbumOut);
-    		//msg.recycle();
-		}
-	};
+//	Handler animationStarterHandler = new Handler(){
+//		@Override
+//		public void handleMessage(Message msg){
+//			Filex filex = (Filex) msg.obj;
+//    		filex.currentAlbumPlayingLayoutOuter.startAnimation(filex.fadeAlbumOut);
+//    		//msg.recycle();
+//		}
+//	};
 	
 }
