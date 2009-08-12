@@ -260,6 +260,7 @@ public class Filex extends Activity {
     private double						songDuration = 0;
     private double						songCurrentPosition = 0;
     public	boolean						albumListIsScrolling = false;
+    public	boolean						albumTransitionIsRunning = false;
     private int							accumulatedProgress = 0;
     private LastFmEventImporter 		lastFmEventImporter = null;
     public	double						concertRadius;
@@ -604,8 +605,12 @@ public class Filex extends Activity {
    	   	/*
    	   	 * Update Current Playing UI
    	   	 */
-   	   	if(currentAlbumPosition != -1)
-   	   		updateCurrentPlayingUi();
+   	   	if(currentAlbumPosition == -1){
+   	    	currentAlbumPosition = getLastAlbumCursorPosition();
+   	    	albumCursorPositionPlaying = currentAlbumPosition;
+//	    	currentSongPosition = getLastSongCursorPosition(); // this is done ahead when we have already created the songCursor
+   	   	}
+   	   	updateCurrentPlayingUi();
    	   	
    	   	Log.i("STARTUP14", System.currentTimeMillis() - logTime + "msec"); 			
    	   	
@@ -618,6 +623,70 @@ public class Filex extends Activity {
      
     }
     
+    /***********************************
+     * 
+     * getLastAlbumCursorPosition
+     * 
+     ***********************************/
+    private int getLastAlbumCursorPosition(){
+		try{
+			/*
+			 * Get last album key from file
+			 */
+    		String albumKey = (new RockOnPreferenceManager(FILEX_PREFERENCES_PATH))
+    			.getString(new Constants().KEY_PREFERENCE_LAST_ALBUM, "");
+	    	albumCursor.moveToFirst();
+	    	/*
+	    	 * cycle the cursor until we find the album
+	    	 */
+	    	while(!albumCursor.isAfterLast()){
+	    		if(albumCursor.getString(
+	    						albumCursor.getColumnIndexOrThrow(
+	    								MediaStore.Audio.Albums.ALBUM_KEY)).compareTo(albumKey)
+	    			== 0){
+	    			break;
+	    		}
+	    		albumCursor.moveToNext();
+	    	}
+	    	if(albumCursor.isAfterLast())
+	    		albumCursor.moveToFirst();
+	    	/*
+	    	 * return index
+	    	 */
+	    	return albumCursor.getPosition();
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    		return 0;
+    	}
+    }
+    
+    /***************************************
+     * 
+     * moveSongCursorToLastPlayingPosition
+     * 
+     ***************************************/
+    public int getLastSongCursorPosition(){
+    	try{
+    		String songKey = (new RockOnPreferenceManager(FILEX_PREFERENCES_PATH))
+    			.getString(new Constants().KEY_PREFERENCE_LAST_SONG, "");
+	    	songCursor.moveToFirst();
+	    	while(!songCursor.isAfterLast()){
+	    		if(songCursor.getString(
+	    						songCursor.getColumnIndexOrThrow(
+	    								MediaStore.Audio.Media.TITLE_KEY)).compareTo(songKey)
+	    			== 0){
+	    			break;
+	    		}
+	    		songCursor.moveToNext();
+	    	}
+	    	if(songCursor.isAfterLast())
+	    		songCursor.moveToFirst();
+	    	return songCursor.getPosition();
+    	} catch (Exception e) {
+    		e.printStackTrace();
+    		return 0;
+    	}
+    }
     
     /***********************************
      * 
@@ -630,6 +699,9 @@ public class Filex extends Activity {
     	 */
     	albumCursor.moveToPosition(currentAlbumPosition);
     	songCursor = initializeSongCursor(albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)));
+    	/* If this is the first run we need to go and fetch the last playing song */
+    	if(currentSongPosition == -1)
+    		currentSongPosition = getLastSongCursorPosition();
     	songCursor.moveToPosition(currentSongPosition);
     	
     	/*
@@ -2174,7 +2246,7 @@ public class Filex extends Activity {
 	    		/*
 	    		 * Check if Album List started to scroll
 	    		 */
-	    		if(albumListIsScrolling)
+	    		if(albumListIsScrolling || albumTransitionIsRunning)
 	    			return;
 	    		
 //	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
@@ -2193,7 +2265,7 @@ public class Filex extends Activity {
 	    		/*
 	    		 * Check if List started to scroll
 	    		 */
-	    		if(albumListIsScrolling)
+	    		if(albumListIsScrolling || albumTransitionIsRunning)
 	    			return;
 	    		
 	    		
@@ -2217,8 +2289,8 @@ public class Filex extends Activity {
     		/*
     		 * Check if List started to scroll
     		 */
-    		if(albumListIsScrolling)
-    			return;
+    		if(albumListIsScrolling || albumTransitionIsRunning)
+    			break;
     		
     		/* Negative */
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
@@ -2246,8 +2318,8 @@ public class Filex extends Activity {
     		/*
     		 * Check if List started to scroll
     		 */
-    		if(albumListIsScrolling)
-    			return;
+    		if(albumListIsScrolling || albumTransitionIsRunning)
+    			break;
     		
     		/* Positive */
     		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
@@ -2271,6 +2343,8 @@ public class Filex extends Activity {
     			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
     		}
     	}
+    	
+    	Log.i("CACHE", "Stopped Caching");
 
     }
     
@@ -2983,8 +3057,16 @@ public class Filex extends Activity {
     	@Override
     	public void	onItemClick(AdapterView<?> parent, View view, int position, long id){
     		/* Need to stop the album caching thread */
-    		//// NEEDS TO HAVE ITS OWN VARIABLE
-    		albumListIsScrolling = true;
+    		albumTransitionIsRunning = true;
+    		/* give the animation 4 secs to run */
+    		new Handler().postDelayed(
+    				new Runnable(){
+    					public void run(){
+    						albumTransitionIsRunning = false;
+    					}
+    				}, 
+    				4000);
+    		
     		
     		/*
     		 * Check if it is not the current Album
@@ -3071,10 +3153,6 @@ public class Filex extends Activity {
 //    				},
 //    				6000);
 
-    		
-    		/* restoring the isScrolling value */
-    		//////// TODO: needs its own value
-    		albumListIsScrolling = false;
     	}
     		
     };
