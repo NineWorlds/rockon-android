@@ -4905,6 +4905,18 @@ public class Filex extends Activity {
 				albumChangedIntentReceiver.onReceive(this, null);
 				
 			}
+			
+
+			/* 
+			 * Set BG of the artist and song containers 
+			 */
+			//TODO
+			if(VIEW_STATE == FULLSCREEN_VIEW){
+				if(display.getOrientation() == 0)
+					setSongInfoBg(true);
+				else
+					setSongInfoBg(false);
+			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -5920,6 +5932,30 @@ public class Filex extends Activity {
 	
 	/********************************
 	 * 
+	 * setSongInfoBg
+	 * 
+	 ********************************/
+	public void setSongInfoBg(boolean showAlbumReflection){
+		ViewGroup songInfoContainer = (ViewGroup) 
+			findViewById(R.id.current_playing_song_container);
+		FancyBackground fBg = null;
+		if(showAlbumReflection){
+			fBg = new FancyBackground(
+				display.getWidth(),
+				68, //TODO: get this dynamically
+				(BitmapDrawable) currentAlbumPlayingImageView.getDrawable());
+		} else {
+			fBg = new FancyBackground(
+				display.getWidth(),
+				68, //TODO: get this dynamically
+				null);
+		}
+		songInfoContainer.setBackgroundDrawable(
+			fBg.getBackgroundDrawableBottom());
+	}
+	
+	/********************************
+	 * 
 	 * switch between different UI modes
 	 * 
 	 ********************************/
@@ -6114,8 +6150,8 @@ public class Filex extends Activity {
 					params.addRule(RelativeLayout.RIGHT_OF, 0);
 					params.topMargin = 0; // was 12
 					//params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
-					params.height = 90;
-					artistTextContainer.setPadding(12, 12, 12, 12);
+					params.height = 68; //old:90
+					artistTextContainer.setPadding(8, 8, 8, 8); // old: 12
 //					artistTextContainer.setBackgroundResource(R.drawable.fullscreen_artist_overlay);
 					if(display.getOrientation() == 0){
 						artistTextContainer.setBackgroundColor(Color.argb(255, 25, 25, 25));
@@ -6125,20 +6161,27 @@ public class Filex extends Activity {
 						artistTextContainer.setBackgroundColor(Color.argb(133, 25, 25, 25));
 					artistNameText.setMaxLines(1);
 					albumNameText.setMaxLines(1);
+					artistNameText.setTextSize(20.f);
+					albumNameText.setTextSize(16.f);
 					
-					
-		//			params = (LayoutParams) playPauseImage.getLayoutParams();
-		//			params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
-		//
+					/*
+					 * Song Container
+					 */
+					/* PlayPauseImage */
+					params = (LayoutParams) playPauseImage.getLayoutParams();
+					params.height = 20;
+					/* Progress Bar */
+					params = (LayoutParams) songProgressBar.getLayoutParams();
+					params.height = 20;
+		
 		//			params = (LayoutParams) songNameText.getLayoutParams();
 		//			params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
-					
+					/* SongName Container */
 					RelativeLayout songNameContainer = (RelativeLayout)
 						findViewById(R.id.songname_container);
 					params = (LayoutParams) songNameContainer.getLayoutParams();
 					params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
-					
-					
+					/* SongInfo Container */
 					RelativeLayout songInfoContainer = (RelativeLayout) 
 						findViewById(R.id.current_playing_song_container);
 					params = (LayoutParams)	songInfoContainer.getLayoutParams();
@@ -6147,8 +6190,8 @@ public class Filex extends Activity {
 					params.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, 1);
 					//params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
 					// TODO: FIX THIS
-					params.height = 90;
-					songInfoContainer.setPadding(12, 0, 12, 12); // was 0,0,0,24
+					params.height = 68; // old:90
+					songInfoContainer.setPadding(8, 0, 8, 8); // was 0,0,0,24
 					if(display.getOrientation() == 0){
 						songInfoContainer.setBackgroundColor(Color.argb(255, 25, 25, 25));
 //						songInfoContainer.setBackgroundResource(
@@ -6158,18 +6201,21 @@ public class Filex extends Activity {
 						songInfoContainer.setBackgroundColor(Color.argb(133, 25, 25, 25));
 					}
 					songNameText.setMaxLines(1);
+					songNameText.setTextSize(20.f);
+					
 					/*
 					 * Unhide the separators
 					 */
-					ImageView im = (ImageView) findViewById(R.id.fullscreen_artist_separator);
-					im.setVisibility(View.VISIBLE);
-					im = (ImageView) findViewById(R.id.fullscreen_song_separator);
-					im.setVisibility(View.VISIBLE);					
+//					ImageView im = (ImageView) findViewById(R.id.fullscreen_artist_separator);
+//					im.setVisibility(View.VISIBLE);
+//					im = (ImageView) findViewById(R.id.fullscreen_song_separator);
+//					im.setVisibility(View.VISIBLE);					
 					
 					/* Set BG of the artist and song containers */
-					//TODO
-					
-					
+					if(display.getOrientation() == 0)
+						setSongInfoBg(true);
+					else
+						setSongInfoBg(false);
 	
 				} else { // FULLSCREEN to NORMAL
 					/*
@@ -6256,13 +6302,24 @@ public class Filex extends Activity {
 					
 					artistNameText.setMaxLines(2);
 					albumNameText.setMaxLines(2);
+					artistNameText.setTextSize(24.f);
+					albumNameText.setTextSize(20.f);
 					
-		//			params = (LayoutParams) playPauseImage.getLayoutParams();
-		//			params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
+					/*
+					 * Song Container
+					 */
+					/* playpauseImage */
+					params = (LayoutParams) playPauseImage.getLayoutParams();
+					params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
 		//
 		//			params = (LayoutParams) songNameText.getLayoutParams();
 		//			params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
 					
+					/* SongProgress */
+					params = (LayoutParams) songProgressBar.getLayoutParams();
+					params.height = 24;
+					
+					/* SongNameContainer */
 					RelativeLayout songNameContainer = (RelativeLayout)
 						findViewById(R.id.songname_container);
 					params = (LayoutParams) songNameContainer.getLayoutParams();
@@ -6281,6 +6338,7 @@ public class Filex extends Activity {
 					songInfoContainer.setBackgroundColor(Color.argb(0, 0, 0, 0));
 				
 					songNameText.setMaxLines(2);
+					songNameText.setTextSize(24.f);
 					
 					/*
 					 * Hide the separators
@@ -6326,63 +6384,6 @@ public class Filex extends Activity {
 		this.mainUIContainer.startAnimation(fadeOut);
 		
 		showFullScreenHandler.sendEmptyMessageDelayed(NORMAL_VIEW, 300);
-		
-		VIEW_STATE = FULLSCREEN_VIEW;
-		
-		if(true)
-			return;
-		
-		/*
-		 * Animate fading of the album navigator
-		 */
-		Rotate3dAnimation perspectiveFullLeft = new Rotate3dAnimation(
-				0,0, 	// X-axis rotation
-				90,90, 	// Y-axis rotation
-				0,0,  	// Z-axis rotation
-				100, 100, // rotation center
-				0.0f, // Z-depth
-				false); //reverse movement
-    	perspectiveFullLeft.setFillAfter(true);
-    	perspectiveFullLeft.setDuration(1);
-		albumNavigatorList.startAnimation(perspectiveFullLeft);
-//    	currentPlayingLayout.startAnimation(perspectiveFullLeft);
-		
-		
-		/*
-		 * Put album navigator full screen
-		 */
-		RelativeLayout.LayoutParams params = (LayoutParams) currentPlayingLayout.getLayoutParams();
-		params.width = RelativeLayout.LayoutParams.FILL_PARENT;
-		currentPlayingLayout.setLayoutParams(params);
-		
-		/*
-		 * Animate growth of the current playing layout
-		 */
-//		int fullWidth = display.getWidth();
-////		int slideAmount = display.getWidth() - albumNavigatorList.getWidth();
-////		TranslateAnimation slideLeft= new TranslateAnimation(slideAmount, 0, 0, 0);
-//		ScaleAnimation scaleAnim = new ScaleAnimation(0.66f, 1.0f, 1.0f, 1.0f);
-//		scaleAnim.setFillAfter(true);
-//		scaleAnim.setDuration(400);
-//		currentPlayingLayout.startAnimation(scaleAnim);
-		
-		//albumNavigatorLayout.setBackgroundColor(Color.WHITE);
-//			
-//			LayoutParams paramsList = (LayoutParams) albumNavigatorList.getLayoutParams();
-//			paramsList.width = display.getWidth();
-//			albumNavigatorList.setLayoutParams(paramsList);
-
-//		currentPlayingLayout.setVisibility(View.GONE);
-		
-//		if(VIEW_STATE == NORMAL_VIEW){
-//			
-//			
-//			
-//		} else if(VIEW_STATE == LIST_EXPANDED_VIEW) {
-//			
-//		} else if(VIEW_STATE == FULLSCREEN_VIEW){
-//			
-//		}
 		
 		VIEW_STATE = FULLSCREEN_VIEW;
 	}
