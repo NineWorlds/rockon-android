@@ -448,6 +448,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     Shader shader;
     RectF	rect = new RectF();
     Paint	paint= new Paint();
+    float	round = 0.f;
 
     
     /*********************************
@@ -526,12 +527,22 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	        rect.left = 1.0f;
 	        rect.top = 1.0f;
 	        rect.right = width - 1.0f;
-	        rect.bottom = height - 1.0f; 
-	        if(showFrame){
-	        	canvas.drawRoundRect(rect, width/40.0f, height/40.0f, paint);
-	        } else {
-	        	canvas.drawRoundRect(rect, width/30.0f, height/30.0f, paint);
+	        rect.bottom = height - 1.0f;
+	        if(width > 300)
+	        	round = 0.f; // fullscreen
+	        else{
+	        	// other sizes
+	        	if(showFrame)
+	        		round = width/40.f;
+	        	else
+	        		round = width/30.f;
 	        }
+	        if(showFrame){
+	        	canvas.drawRoundRect(rect, round, round, paint);
+	        } else {
+	        	canvas.drawRoundRect(rect, round, round, paint);
+	        }
+	        
 	
 	        
 	//        int[] gradColors = {0x44222222, 0x44EEEEEE, 0x44FFFFFF};
