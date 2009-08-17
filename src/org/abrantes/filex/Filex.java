@@ -5221,101 +5221,107 @@ public class Filex extends Activity {
 
 		//this.removeDialog(R.layout.song_progress_dialog);
 		
-		switch(dialogId){
-		case R.layout.song_progress_dialog:
-			double start = System.currentTimeMillis();
-			/*
-			 * Move album Cursor
-			 */
-			try {
-				albumCursor.moveToPosition(playerServiceIface.getAlbumCursorPosition());
-			} catch (Exception e) {
-				e.printStackTrace();
-				return null;
-			}
-			//albumNavigatorItemLongClickIndex = albumCursor.getPosition();
-				
-			/*
-			 * getSongCursor and move it
-			 */
-			songCursor = initializeSongCursor(albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)));
-			try{
-				songCursor.moveToPosition(playerServiceIface.getSongCursorPosition());
-			} catch(Exception e) {
-				e.printStackTrace();
-				return null;
-			}
-	
-			Log.i("PRFRMC", "took "+(System.currentTimeMillis()-start)+"ms to reload cursors");
-	
+		try{
 			
-			/*
-			 * Create Dialog
-			 */
-			try{
-				songProgressAlertDialog = new AlertDialog.Builder(context);
-				songProgressAlertDialog.setTitle(
-					songCursor.getString(
-						songCursor.getColumnIndexOrThrow(
-							MediaStore.Audio.Media.TITLE))
-					+"\n"+
-					songCursor.getString(
-						songCursor.getColumnIndexOrThrow(
-							MediaStore.Audio.Media.ARTIST)));
+			switch(dialogId){
+			case R.layout.song_progress_dialog:
+				double start = System.currentTimeMillis();
+				/*
+				 * Move album Cursor
+				 */
+				try {
+					albumCursor.moveToPosition(playerServiceIface.getAlbumCursorPosition());
+				} catch (Exception e) {
+					e.printStackTrace();
+					return null;
+				}
+				//albumNavigatorItemLongClickIndex = albumCursor.getPosition();
 					
-				songProgressView = inflateSongProgressView();
-				//((ViewGroup)songProgressView.getParent()).removeView(songProgressView);
-			}catch(Exception e){
-				e.printStackTrace();
-				return null;
-			}
-			
-			
-			try {
-				
-				int duration=1;
-				duration = playerServiceIface.getDuration()/1000;
-				int durMins = duration/60;
-				int durSecs = duration%60;
-				
-				int curPos=0;
-				curPos = playerServiceIface.getPlayingPosition()/1000;
-				int curMins = curPos/60;
-				int curSecs = curPos%60;
-			
-				((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
-					.setOnSeekBarChangeListener(songProgressDialogOnSeek);
-				((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
-					.setMax(duration*1000);
-				((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
-					.setProgress(curPos*1000);
-				
-				if(curSecs > 9)
-					((TextView)songProgressView.findViewById(R.id.song_progress_dialog_current_time))
-						.setText(curMins+"'"+curSecs);
-				else
-					((TextView)songProgressView.findViewById(R.id.song_progress_dialog_current_time))
-						.setText(curMins+"'0"+curSecs);
-					
-				if(durSecs > 9)
-					((TextView)songProgressView.findViewById(R.id.song_progress_dialog_total_time))
-						.setText(durMins+"'"+durSecs);
-				else
-					((TextView)songProgressView.findViewById(R.id.song_progress_dialog_total_time))
-						.setText(durMins+"'0"+durSecs);
-					
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
-	
-			songProgressAlertDialog.setView(songProgressView);
-			songProgressAlertDialog.setPositiveButton("Back", songProgressDialogOnPositiveClickListener);
-			songProgressAlertDialog.setOnCancelListener(songProgressDialogOnCancelListener);
-			return songProgressAlertDialog.create();
-			
-		default:
-			return null;
+				/*
+				 * getSongCursor and move it
+				 */
+				songCursor = initializeSongCursor(albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)));
+				try{
+					songCursor.moveToPosition(playerServiceIface.getSongCursorPosition());
+				} catch(Exception e) {
+					e.printStackTrace();
+					return null;
+				}
 		
+				Log.i("PRFRMC", "took "+(System.currentTimeMillis()-start)+"ms to reload cursors");
+		
+				
+				/*
+				 * Create Dialog
+				 */
+				try{
+					songProgressAlertDialog = new AlertDialog.Builder(context);
+					songProgressAlertDialog.setTitle(
+						songCursor.getString(
+							songCursor.getColumnIndexOrThrow(
+								MediaStore.Audio.Media.TITLE))
+						+"\n"+
+						songCursor.getString(
+							songCursor.getColumnIndexOrThrow(
+								MediaStore.Audio.Media.ARTIST)));
+						
+					songProgressView = inflateSongProgressView();
+					//((ViewGroup)songProgressView.getParent()).removeView(songProgressView);
+				}catch(Exception e){
+					e.printStackTrace();
+					return null;
+				}
+				
+				
+				try {
+					
+					int duration=1;
+					duration = playerServiceIface.getDuration()/1000;
+					int durMins = duration/60;
+					int durSecs = duration%60;
+					
+					int curPos=0;
+					curPos = playerServiceIface.getPlayingPosition()/1000;
+					int curMins = curPos/60;
+					int curSecs = curPos%60;
+				
+					((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
+						.setOnSeekBarChangeListener(songProgressDialogOnSeek);
+					((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
+						.setMax(duration*1000);
+					((SeekBar)songProgressView.findViewById(R.id.song_progress_dialog_seekbar))
+						.setProgress(curPos*1000);
+					
+					if(curSecs > 9)
+						((TextView)songProgressView.findViewById(R.id.song_progress_dialog_current_time))
+							.setText(curMins+"'"+curSecs);
+					else
+						((TextView)songProgressView.findViewById(R.id.song_progress_dialog_current_time))
+							.setText(curMins+"'0"+curSecs);
+						
+					if(durSecs > 9)
+						((TextView)songProgressView.findViewById(R.id.song_progress_dialog_total_time))
+							.setText(durMins+"'"+durSecs);
+					else
+						((TextView)songProgressView.findViewById(R.id.song_progress_dialog_total_time))
+							.setText(durMins+"'0"+durSecs);
+						
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+		
+				songProgressAlertDialog.setView(songProgressView);
+				songProgressAlertDialog.setPositiveButton("Back", songProgressDialogOnPositiveClickListener);
+				songProgressAlertDialog.setOnCancelListener(songProgressDialogOnCancelListener);
+				return songProgressAlertDialog.create();
+				
+			default:
+				return null;
+			
+			}
+		} catch(Exception e) {
+			e.printStackTrace();
+			return null;
 		}
 	}
 	

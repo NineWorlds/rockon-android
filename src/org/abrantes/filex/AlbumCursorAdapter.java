@@ -153,46 +153,55 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
      */
     public void reloadNavigatorWidth(){
 
-        WindowManager windowManager 		= (WindowManager) 
-			context.getSystemService(Context.WINDOW_SERVICE);
-
-        Display display						= windowManager.getDefaultDisplay();
-		
-		if(display.getOrientation() == 0){
-			viewWidth = (int) Math.floor(
-				display.getWidth() * 
-				NAVIGATOR_SCREEN_FRACTION
-				);
-		
-			viewWidthNormal = (int) Math.floor(
-				display.getWidth() * 
-				(1-NAVIGATOR_SCREEN_FRACTION)
-				);
-			viewWidthBig = (int) Math.min(
-				display.getWidth(),
-				display.getHeight()
-				);
-		}else{    
-			viewWidth = (int) Math.floor(
-				display.getWidth() * 
-				NAVIGATOR_SCREEN_FRACTION_LANDSCAPE
-				);
-			viewWidthNormal = (int) Math.floor(
-				display.getWidth() * 
-				(1-NAVIGATOR_SCREEN_FRACTION_LANDSCAPE) / 2
-				);
-			viewWidthBig = (int) Math.min(
-				display.getWidth(),
-				display.getHeight()
-				);
-		}
-		viewWidthBig = display.getWidth() - 30;
-		viewHeightBig = display.getHeight() - 60;
-		
-		viewWidthBig = 320;
-		viewHeightBig = 320;
-		
-		params = new LayoutParams(viewWidth, viewWidth);
+    	try{
+	        WindowManager windowManager 		= (WindowManager) 
+				context.getSystemService(Context.WINDOW_SERVICE);
+	
+	        Display display						= windowManager.getDefaultDisplay();
+			
+			if(display.getOrientation() == 0){
+				viewWidth = (int) Math.floor(
+					display.getWidth() * 
+					NAVIGATOR_SCREEN_FRACTION
+					);
+			
+				viewWidthNormal = (int) Math.floor(
+					display.getWidth() * 
+					(1-NAVIGATOR_SCREEN_FRACTION)
+					);
+				viewWidthBig = (int) Math.min(
+					display.getWidth(),
+					display.getHeight()
+					);
+			}else{    
+				viewWidth = (int) Math.floor(
+					display.getWidth() * 
+					NAVIGATOR_SCREEN_FRACTION_LANDSCAPE
+					);
+				viewWidthNormal = (int) Math.floor(
+					display.getWidth() * 
+					(1-NAVIGATOR_SCREEN_FRACTION_LANDSCAPE) / 2
+					);
+				viewWidthBig = (int) Math.min(
+					display.getWidth(),
+					display.getHeight()
+					);
+			}
+			viewWidthBig = display.getWidth() - 30;
+			viewHeightBig = display.getHeight() - 60;
+			
+			viewWidthBig = 320;
+			viewHeightBig = 320;
+			
+			params = new LayoutParams(viewWidth, viewWidth);
+    	} catch(Exception e) {
+    		viewWidth = 120;
+    		
+    		viewWidthNormal = 200;
+			
+    		viewWidthBig = 320;
+			viewHeightBig = 320;
+    	}
     }
     
     /* (non-Javadoc)
