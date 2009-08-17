@@ -58,12 +58,13 @@
     <PreferenceCategory 
     		android:title="@string/settings_category_look_and_feel"
             android:key="parent">
-
+		<!-- 
         <CheckBoxPreference
                 android:key="show_art_while_scrolling"
                 android:title="@string/settings_show_art_while_scrolling"
                 android:summary="@string/settings_show_art_while_scrolling_summary"
                 android:persistent="false" />
+        -->
 		<CheckBoxPreference
                 android:key="show_frame"
                 android:title="@string/settings_show_frame"

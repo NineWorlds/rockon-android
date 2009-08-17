@@ -136,10 +136,10 @@ public class RockOnSettings extends PreferenceActivity {
         /*
          * Look and Feel
          */
-        ((CheckBoxPreference) findPreference(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING))
-			.setChecked(settings.getBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, false));
-        ((CheckBoxPreference) findPreference(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING))
-			.setOnPreferenceChangeListener(new ShowArtWhileScrollingChangeListener());
+//        ((CheckBoxPreference) findPreference(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING))
+//			.setChecked(settings.getBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, false));
+//        ((CheckBoxPreference) findPreference(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING))
+//			.setOnPreferenceChangeListener(new ShowArtWhileScrollingChangeListener());
         
         ((CheckBoxPreference) findPreference(KEY_TOGGLE_SHOW_FRAME))
 			.setChecked(settings.getBoolean(KEY_TOGGLE_SHOW_FRAME, false));
@@ -360,28 +360,28 @@ public class RockOnSettings extends PreferenceActivity {
 //    };
 
 	
-    /*************************************
-     * 
-     * ShowArtWhileScrolling Listener
-     * 
-     *************************************/
-    public class ShowArtWhileScrollingChangeListener implements OnPreferenceChangeListener {
-
-		@Override
-		public boolean onPreferenceChange(Preference preference, Object newValue) {
-//			Log.i("SETTINGS", "Changed show_art_while_scrobbling to "+ newValue);
-//			SharedPreferences settings = getSharedPreferences(Filex.PREFS_NAME, 0);
-//			Editor edit = settings.edit();
-//			edit.putBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, (Boolean) newValue);
-//			edit.commit();
-			
-			RockOnPreferenceManager settings = new RockOnPreferenceManager(FILEX_PREFERENCES_PATH);
-			settings.putBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, (Boolean) newValue);
-
-	        return true;
-		}
-    	
-    }
+//    /*************************************
+//     * 
+//     * ShowArtWhileScrolling Listener
+//     * 
+//     *************************************/
+//    public class ShowArtWhileScrollingChangeListener implements OnPreferenceChangeListener {
+//
+//		@Override
+//		public boolean onPreferenceChange(Preference preference, Object newValue) {
+////			Log.i("SETTINGS", "Changed show_art_while_scrobbling to "+ newValue);
+////			SharedPreferences settings = getSharedPreferences(Filex.PREFS_NAME, 0);
+////			Editor edit = settings.edit();
+////			edit.putBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, (Boolean) newValue);
+////			edit.commit();
+//			
+//			RockOnPreferenceManager settings = new RockOnPreferenceManager(FILEX_PREFERENCES_PATH);
+//			settings.putBoolean(KEY_TOGGLE_SHOW_ART_WHILE_SCROLLING, (Boolean) newValue);
+//
+//	        return true;
+//		}
+//    	
+//    }
 
     /*************************************
      * 

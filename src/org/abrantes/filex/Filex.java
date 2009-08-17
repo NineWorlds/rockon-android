@@ -462,7 +462,7 @@ public class Filex extends Activity {
         	setListExpandedView();
         	break;
         case FULLSCREEN_VIEW:
-        	setFullScreenView();
+        	setFullScreenView(false);
         	break;
         default:
         	setNormalView();
@@ -2309,7 +2309,7 @@ public class Filex extends Activity {
     			/* cache new image */
     			albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
 									center - i, 
-									albumAdapter.BITMAP_SIZE_XSMALL);
+									albumAdapter.BITMAP_SIZE_SMALL);
 				
     			/* update image index */
     			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
@@ -2337,7 +2337,7 @@ public class Filex extends Activity {
     			/* cache new image */
     			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
 									center + i, 
-									albumAdapter.BITMAP_SIZE_XSMALL);
+									albumAdapter.BITMAP_SIZE_SMALL);
     			
     			/* update image index */
     			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
@@ -4319,7 +4319,7 @@ public class Filex extends Activity {
 					
 				} else {					
 					if(VIEW_STATE == NORMAL_VIEW){
-						setFullScreenView();
+						setFullScreenView(true);
 						return true;
 					} else if(VIEW_STATE == LIST_EXPANDED_VIEW) {
 						setNormalView();
@@ -4912,10 +4912,14 @@ public class Filex extends Activity {
 			 */
 			//TODO
 			if(VIEW_STATE == FULLSCREEN_VIEW){
-				if(display.getOrientation() == 0)
+				if(display.getOrientation() == 0){
 					setSongInfoBg(true);
-				else
+					setArtistInfoBG(true);
+				}
+				else{
 					setSongInfoBg(false);
+					setArtistInfoBG(false);
+				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -5006,11 +5010,11 @@ public class Filex extends Activity {
 				> 22
 				)
 			{
-				albumNameText.setMaxLines(1);
+				//albumNameText.setMaxLines(1);
 				albumNameText.setTextScaleX((float) 0.6);
 			} else {
 				albumNameText.setTextScaleX((float) 1.0);
-				albumNameText.setMaxLines(2);
+				//albumNameText.setMaxLines(2);
 			}
 			/*
 			 * Set the artist and album text
@@ -5953,6 +5957,30 @@ public class Filex extends Activity {
 		songInfoContainer.setBackgroundDrawable(
 			fBg.getBackgroundDrawableBottom());
 	}
+	/**********************************
+	 * 
+	 * setArtistInfoBG
+	 * 
+	 **********************************/
+	public void setArtistInfoBG(boolean showAlbumReflection){
+		ViewGroup artistAlbumContainer = (ViewGroup) 
+			findViewById(R.id.current_playing_artist_album_container);
+		FancyBackground fBg = null;
+		if(showAlbumReflection){
+			fBg = new FancyBackground(
+				display.getWidth(),
+				68, //TODO: get this dynamically
+				(BitmapDrawable) currentAlbumPlayingImageView.getDrawable());
+		} else {
+			fBg = new FancyBackground(
+				display.getWidth(),
+				68, //TODO: get this dynamically
+				null);
+		}
+		artistAlbumContainer.setBackgroundDrawable(
+			fBg.getBackgroundDrawableTop());
+	}
+	
 	
 	/********************************
 	 * 
@@ -6080,10 +6108,11 @@ public class Filex extends Activity {
 		@Override
 		public void handleMessage(Message msg){
 		
-			Log.i("GOGO", "FULL SCREEN - PART II");
+//			Log.i("GOGO", "FULL SCREEN - PART II");
 			
 			try {
-				albumCursor.moveToPosition(playerServiceIface.getAlbumCursorPosition());
+				if(playerServiceIface != null)
+					albumCursor.moveToPosition(playerServiceIface.getAlbumCursorPosition());
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -6128,7 +6157,17 @@ public class Filex extends Activity {
 //					currentAlbumPlayingOverlayImageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 					
 					/* use large album bitmap */
-					currentAlbumPlayingImageView.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_FULLSCREEN));
+					if(albumAdapter != null)
+						currentAlbumPlayingImageView.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_FULLSCREEN));
+					else{
+						AlbumArtUtils albumArtUtils = new AlbumArtUtils(display, showFrame);
+						currentAlbumPlayingImageView.setImageBitmap(
+								albumArtUtils.getAlbumBitmap(
+									albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ARTIST)),
+									albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)),
+									albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM_ART)),
+									BITMAP_SIZE_FULLSCREEN));
+					}
 					currentAlbumPlayingImageView.setScaleType(ScaleType.CENTER_INSIDE);
 					
 					/* remove album frame and album margins */
@@ -6173,9 +6212,15 @@ public class Filex extends Activity {
 					/* Progress Bar */
 					params = (LayoutParams) songProgressBar.getLayoutParams();
 					params.height = 20;
-		
-		//			params = (LayoutParams) songNameText.getLayoutParams();
-		//			params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
+					/* Progress Texts */
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress)).setTextSize(16.f);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress)).setPadding(0, 12, 0, 0);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress_ongoing)).setTextSize(16.f);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress_ongoing)).setPadding(0, 3, 0, 0);
+					/* Forward/Rewind image */
+					((ImageView) findViewById(R.id.rewind_image)).setPadding(2, 6, 2, 2); // was (2,2,2,2)
+					((ImageView) findViewById(R.id.forward_image)).setPadding(2, 6, 2, 2); // was (2,2,2,2)
+
 					/* SongName Container */
 					RelativeLayout songNameContainer = (RelativeLayout)
 						findViewById(R.id.songname_container);
@@ -6191,7 +6236,7 @@ public class Filex extends Activity {
 					//params.height = RelativeLayout.LayoutParams.WRAP_CONTENT;
 					// TODO: FIX THIS
 					params.height = 68; // old:90
-					songInfoContainer.setPadding(8, 0, 8, 8); // was 0,0,0,24
+					songInfoContainer.setPadding(8, 8, 8, 8); // was 0,0,0,24
 					if(display.getOrientation() == 0){
 						songInfoContainer.setBackgroundColor(Color.argb(255, 25, 25, 25));
 //						songInfoContainer.setBackgroundResource(
@@ -6201,7 +6246,7 @@ public class Filex extends Activity {
 						songInfoContainer.setBackgroundColor(Color.argb(133, 25, 25, 25));
 					}
 					songNameText.setMaxLines(1);
-					songNameText.setTextSize(20.f);
+					songNameText.setTextSize(16.f);
 					
 					/*
 					 * Unhide the separators
@@ -6212,10 +6257,16 @@ public class Filex extends Activity {
 //					im.setVisibility(View.VISIBLE);					
 					
 					/* Set BG of the artist and song containers */
-					if(display.getOrientation() == 0)
+					if(display.getOrientation() == 0){
 						setSongInfoBg(true);
-					else
+						setArtistInfoBG(true);
+						Log.i("FS-BG", "Setting full screen background");
+					}
+					else{
 						setSongInfoBg(false);
+						setArtistInfoBG(false);
+						Log.i("FS-BG", "Setting full screen background");
+					}
 	
 				} else { // FULLSCREEN to NORMAL
 					/*
@@ -6325,6 +6376,18 @@ public class Filex extends Activity {
 					params = (LayoutParams) songNameContainer.getLayoutParams();
 					params.height = RelativeLayout.LayoutParams.FILL_PARENT;
 					
+					/*
+					 * song progress texts
+					 */
+					/* Progress Texts */
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress)).setTextSize(20.f);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress)).setPadding(0, 0, 0, 0);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress_ongoing)).setTextSize(18.f);
+					((TextView) findViewById(R.id.songfest_current_playing_song_progress_ongoing)).setPadding(0, 0, 0, 0);
+					/* Forward/Rewind image */
+					((ImageView) findViewById(R.id.rewind_image)).setPadding(2, 2, 2, 2);
+					((ImageView) findViewById(R.id.forward_image)).setPadding(2, 2, 2, 2); 
+					
 					RelativeLayout songInfoContainer = (RelativeLayout) 
 						findViewById(R.id.current_playing_song_container);
 					params = (LayoutParams)	songInfoContainer.getLayoutParams();
@@ -6372,20 +6435,27 @@ public class Filex extends Activity {
 		
 	};
 	
-	public void setFullScreenView(){
+	public void setFullScreenView(boolean doAnimation){
 		
 		Log.i("GOGO", "FULL SCREEN");
 		
 		hideBackground();
 		
-		AlphaAnimation fadeOut = new AlphaAnimation(1.0f, 0.0f);
-		fadeOut.setFillAfter(true);
-		fadeOut.setDuration(300);
-		this.mainUIContainer.startAnimation(fadeOut);
-		
-		showFullScreenHandler.sendEmptyMessageDelayed(NORMAL_VIEW, 300);
-		
 		VIEW_STATE = FULLSCREEN_VIEW;
+		
+		if(doAnimation){
+			AlphaAnimation fadeOut = new AlphaAnimation(1.0f, 0.0f);
+			fadeOut.setFillAfter(true);
+			fadeOut.setDuration(300);
+			this.mainUIContainer.startAnimation(fadeOut);
+			
+			showFullScreenHandler.sendEmptyMessageDelayed(NORMAL_VIEW, 300);
+		} else {
+			showFullScreenHandler.sendEmptyMessageDelayed(NORMAL_VIEW, 50);
+//			showFullScreenHandler.sendEmptyMessage(NORMAL_VIEW);
+		}
+		
+		
 	}
 	
 	/*******************************
