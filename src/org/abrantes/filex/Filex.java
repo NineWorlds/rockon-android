@@ -874,14 +874,14 @@ public class Filex extends Activity {
 	   		 * Version 2 specific default preference changes
 	   		 */
 	   		// version 2 specific
-	   	   	if(albumCursor.getCount() > 10000)
+//	   	   	if(albumCursor.getCount() > 10000)
 	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, false);
-	   	   	else
-	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
+//	   	   	else
+//	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
 	   		
 	   		readPreferences();
-	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
-	   		albumAdapter.showFrame = showFrame;
+//	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
+//	   		albumAdapter.showFrame = showFrame;
 			//
 	   		
 	   		/*
@@ -3805,7 +3805,8 @@ public class Filex extends Activity {
 				//albumNavigatorTextContainer.setVisibility(View.GONE);
 			}
 			if(scrollState == OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
-				albumAdapter.isScrolling = true;
+				if(albumAdapter != null)
+					albumAdapter.isScrolling = true;
 				albumListIsScrolling = true;
 								
 				if(albumListSelectedAlbumTimer != null)
