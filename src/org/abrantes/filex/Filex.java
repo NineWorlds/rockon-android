@@ -2225,6 +2225,7 @@ public class Filex extends Activity {
         		cacheImages(centerVar);
     		}
     	};
+    	imageCachingThread.setPriority(Thread.MIN_PRIORITY);
     	imageCachingThread.start();
     }
     
@@ -2233,7 +2234,7 @@ public class Filex extends Activity {
      */
     static Bitmap[] albumImages = null;
     static int[]	albumImagesIndexes = null;
-    final  int		MAX_IMAGES_IN_CACHE = 56;
+    final  int		MAX_IMAGES_IN_CACHE = 10;
     final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
     
     /*
