@@ -694,6 +694,12 @@ public class Filex extends Activity {
      * 
      ***********************************/
     public void updateCurrentPlayingUi(){
+    	/*
+    	 * Sanity check
+    	 */
+    	if(albumCursor == null)
+    		return;
+    	
     	/* 
     	 * move cursors to the current playing position 
     	 */
@@ -1141,7 +1147,7 @@ public class Filex extends Activity {
          *  Add menu items
          */
         if(this.SHUFFLE)
-        	menu.add(0, 0, 0, "Suffle Off");
+        	menu.add(0, 0, 0, "Shuffle Off");
         else
         	menu.add(0, 0, 0, "Shuffle On");
         menu.add(0, 1, 1, "Search");
