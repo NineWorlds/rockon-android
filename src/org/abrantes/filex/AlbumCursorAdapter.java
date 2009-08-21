@@ -210,6 +210,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     @Override
     public void bindView(View view, Context context, Cursor cursor) {
 //    	Log.i("BINDVIEW", "Position: " + cursor.getPosition());
+    	    	
     	try{
 	    	/*
 	    	 * Get the item list image component set its height right

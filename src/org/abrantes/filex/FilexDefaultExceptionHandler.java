@@ -7,6 +7,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.util.Log;
 
@@ -35,7 +36,7 @@ import android.util.Log;
 
 			StringBuilder message = new StringBuilder(
 				"Sorry!\n\nRockOn "+
-				"v1.4.1 "+
+				"v1.4.5 "+
 				"crashed! Please send this mail, so that we " +
 				"can analyze/fix the issue.\n");
 			message.append(String.format("-- Android Version: sdk=%s, release=%s, inc=%s\n",

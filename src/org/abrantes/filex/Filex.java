@@ -387,7 +387,7 @@ public class Filex extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         context = this;        	
-        System.gc();
+//        System.gc();
         
         Log.i("STARTUP1", System.currentTimeMillis() - logTime + "msec");
         
@@ -2157,7 +2157,7 @@ public class Filex extends Activity {
 							
 							/* refresh the views in case the cache does not have this area */
 							albumAdapter.albumImagesCenter = currentAlbumPosition;
-							for(int i = 0; i < 6 ; i++){
+							for(int i = 0; i < Math.min(6, HALF_IMAGES_IN_CACHE-1) ; i++){
 									albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
 											currentAlbumPosition + i, 
 											BITMAP_SIZE_SMALL);
@@ -2234,7 +2234,7 @@ public class Filex extends Activity {
      */
     static Bitmap[] albumImages = null;
     static int[]	albumImagesIndexes = null;
-    final  int		MAX_IMAGES_IN_CACHE = 10;
+    final  int		MAX_IMAGES_IN_CACHE = 0;
     final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
     
     /*
@@ -2245,6 +2245,7 @@ public class Filex extends Activity {
     public void cacheImages(int center){
     	windowMax = center + HALF_IMAGES_IN_CACHE;
     	windowMin = center - HALF_IMAGES_IN_CACHE;
+    	
     	/* 
     	 * re-utilize what you can 
     	 */
@@ -3681,129 +3682,42 @@ public class Filex extends Activity {
 		@Override
 		public void onScrollStateChanged(AbsListView view, int scrollState) {
 			if(scrollState == OnScrollListener.SCROLL_STATE_IDLE){
-				System.gc();
-				
-				albumAdapter.isScrolling = false;
+//				System.gc();
+				if(albumAdapter != null)
+					albumAdapter.isScrolling = false;
 				albumListIsScrolling = false;
 
-				/*
-				 * Update the visible views
-				 */
-				if(true){ // probably do this only if the visible views were not cached
-					refreshVisibleList(view);
-				}
-				
 				Log.i("SCROLLIDLE", "Will start CACHING for center " + view.getFirstVisiblePosition());
 				/*
 				 * Cache new images in range
 				 */
 				imageCachingLaunchThread(view.getFirstVisiblePosition());
 				
-				if(true)
-					return;
+//				// try to generate another garbage collection
+//				for(int i=0; i<1; i++){
+//					Bitmap b = albumAdapter.getAlbumBitmap(0, BITMAP_SIZE_SMALL);
+//				}
 				
-				if(true || !showArtWhileScrolling){
-					int i = view.getFirstVisiblePosition();
-					int count = view.getChildCount();
-					for(int j = 0; j < count; j++){
-						View v = view.getChildAt(j);
-	
-						/*
-						 * Reload ImageView
-						 */
-						ImageView albumImage = (ImageView)
-							v.findViewById(R.id.navigator_albumart_image);
-						if(albumImage != null){
-							albumImage.setImageBitmap(albumAdapter.getAlbumBitmap(j+i, BITMAP_SIZE_SMALL));
-//							if(VIEW_STATE == FULLSCREEN_VIEW)
-//								albumImage.setImageBitmap(albumAdapter.getAlbumBitmap(j+i, BITMAP_SIZE_FULLSCREEN));
-//							else
-//								albumImage.setImageBitmap(albumAdapter.getAlbumBitmap(albumCursor.getPosition(), BITMAP_SIZE_NORMAL));
-						}
-												
-						/*
-						 * Hide (or show) Text Hint
-						 */
-						TextView albumText = (TextView)
-							v.findViewById(R.id.navigator_albumart_alternative);
-						if(albumAdapter.albumCoverPath != null){
-							Log.i("SCROLL IDLE", "album cover exists");	
-							if(albumText != null)
-								albumText.setVisibility(View.GONE);
-						} else {
-							Log.i("SCROLL IDLE", "album cover FAIL");	
-							if(albumText != null)
-								albumText.setVisibility(View.VISIBLE);
-						}
-	
-					}
-				}
-				//navigatorInitialTextView.setText("");
-
-//				AlphaAnimation fadeoutAnim = new AlphaAnimation(1,0);
-//				fadeoutAnim.setDuration(250);
-//				fadeoutAnim.setFillAfter(true);
-//				fadeoutAnim.setAnimationListener(new AnimationListener(){
-//
-//					@Override
-//					public void onAnimationEnd(Animation animation) {
-////						navigatorInitialTextView.setVisibility(View.GONE);
-////						AlphaAnimation fadeoutAnim = new AlphaAnimation(1,1);
-////						fadeoutAnim.setDuration(1);
-////						fadeoutAnim.setFillAfter(true);	
-////						navigatorInitialTextView.startAnimation(fadeoutAnim);
-//					}
-//
-//					@Override
-//					public void onAnimationRepeat(Animation animation) {
-//						
-//					}
-//
-//					@Override
-//					public void onAnimationStart(Animation animation) {
-//						
-//					}
-//					
-//				});
-//				navigatorInitialTextView.startAnimation(fadeoutAnim);
-				
-				if(true)
-					return;
-//				if(albumListSelectedAlbumTimer != null)
-//					albumListSelectedAlbumTimer.cancel();
-//				albumListSelectedAlbumTimer = new Timer();
-//				albumListSelectedAlbumTimer.schedule(new AlbumListSelectedAlbumTimerTask(), 10000);
-//
-//				AlphaAnimation fadeinAnim = new AlphaAnimation(0,1);
-//				//TranslateAnimation fadeinAnim = new TranslateAnimation(-400, 0,
-//				//														0,0);
-//				fadeinAnim.setDuration(400);
-//				fadeinAnim.setFillAfter(true);
-//				populateAlbumLabels(view);
-//				albumNavigatorTextContainer.setVisibility(View.VISIBLE);
-//				albumNavigatorTextContainer.startAnimation(fadeinAnim);
-//				
-//				/* 
-//				 * set timer to fade the album descriptions off
-//				 */
-//				removeAlbumLabelsTimer = new Timer();
-//				removeAlbumLabelsTimer.schedule(new RemoveAlbumLabelsTimerTask(),
-//												3000);
 //				System.gc();
+
+				if(true)
+					return;
+				
+//				/*
+//				 * Update the visible views
+//				 */
+//				if(true){ // probably do this only if the visible views were not cached
+//					refreshVisibleList(view);
+//				}
+//				
+//				
+//				if(true)
+//					return;
+
 			}
 			if(scrollState == OnScrollListener.SCROLL_STATE_FLING){
 				albumAdapter.isScrolling = true;
 				albumListIsScrolling = true;
-				
-//				AlphaAnimation fadeoutAnim = new AlphaAnimation(1,1);
-//				fadeoutAnim.setDuration(1);
-//				fadeoutAnim.setFillAfter(true);
-//				navigatorInitialTextView.startAnimation(fadeoutAnim);
-				
-//				navigatorInitialTextView.setVisibility(View.GONE);
-//				navigatorInitialTextView.setVisibility(View.VISIBLE);
-				
-				//albumNavigatorTextContainer.setVisibility(View.GONE);
 			}
 			if(scrollState == OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
 				if(albumAdapter != null)
@@ -3811,33 +3725,7 @@ public class Filex extends Activity {
 				albumListIsScrolling = true;
 								
 				if(albumListSelectedAlbumTimer != null)
-					albumListSelectedAlbumTimer.cancel();
-
-				//navigatorInitialTextView.setText("A");
-				
-//				AlphaAnimation fadeoutAnim = new AlphaAnimation(1,1);
-//				fadeoutAnim.setDuration(1);
-//				fadeoutAnim.setFillAfter(true);
-//				navigatorInitialTextView.startAnimation(fadeoutAnim);
-				if(true)
-					return;
-				//AlphaAnimation fadeoutAnim = new AlphaAnimation(1,0);
-				//fadeoutAnim.setDuration(1);
-				//fadeoutAnim.setFillAfter(true);
-				//albumNavigatorTextContainer.startAnimation(fadeoutAnim);
-//				if(removeAlbumLabelsTimer != null)
-//					removeAlbumLabelsTimer.cancel();
-//				albumNavigatorTextContainer.setVisibility(View.GONE);
-//				albumNavigatorTextContainer.dispatchWindowVisibilityChanged(View.GONE);
-				//hideAlbumLabelsHandler.sendEmptyMessage(0);
-				
-//				/* WORST HACK EVER */
-//				AlphaAnimation fadeinAnim = new AlphaAnimation(1,1);
-//				fadeinAnim.setDuration(1);
-//				fadeinAnim.setFillAfter(true);
-//				albumNavigatorList.setVisibility(View.VISIBLE);
-//				albumNavigatorList.startAnimation(fadeinAnim);
-				
+					albumListSelectedAlbumTimer.cancel();				
 			}
 		}
     	
