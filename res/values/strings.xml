@@ -3,6 +3,8 @@
     <string name="app_name">RockOn</string>
     <string name="list_hint">Hold the song title to hear a song preview</string>
     <string name="playlist_hint">EXPERIMENTAL - PLEASE GIVE FEEDBACK</string>
+    <string name="version_4_title">New version</string>
+    <string name="version_4_update_info">The new RockOn version includes very significant performance improvements in terms of album list scrolling speed. To take advantage of those improvements it is required that the album cover library is refreshed (may take up to a couple of minutes depending on the size of your library). Do you want to refresh your library now (you can do it later by choosing the 'Get Art' menu option)?</string>
     
     <string name="settings_category_general">General</string>
     <string name="settings_show_icon">Show Persistent Icon</string>

@@ -192,7 +192,7 @@ public class Filex extends Activity {
     String				FILEX_CONCERT_PATH = "/sdcard/RockOn/concert/";
     String				FILEX_PREFERENCES_PATH = "/sdcard/RockOn/preferences/";
     String				FILEX_FILENAME_EXTENSION = "";
-    long				VERSION = (long) 3;
+    long				VERSION = (long) 4;
     long				ART_IMPORT_INTVL = 20*24*60*60*1000;
     double				CONCERT_RADIUS_DEFAULT = 750000;
     double				CONCERT_RADIUS_INCREMENT = 50000;
@@ -825,70 +825,105 @@ public class Filex extends Activity {
      * hanldeNewVersionBoot
      * 
      *********************************************/
-    public void handleNewVersionBoot(){
-	   		
-	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putLong("Version", VERSION);
-	   		
-	   		/*
-	   		 * Clear previous Album Art
-	   		 */
-	   		Builder aD = new AlertDialog.Builder(context);
-	   		aD.setTitle("New Version");
-	   		aD.setMessage("The new version of RockOn supports album art download from higher quality sources. Do you want to download art now? " +
-	   				"Every 10 albums will take aproximately 1 minute to download. " +
-	   				"(You can always do this later by choosing the 'Get Art' menu option)");
-	   		aD.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
-	
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-		   	   		//(new RockOnPreferenceManager(FILEX_PREFERENCES_PATH)).putLong("artImportDate", 0);
-		   	   		try{
-			   	   		File albumArtDir = new File(FILEX_ALBUM_ART_PATH);
-			   	   		String[] fileList = albumArtDir.list();
-			   	   		File albumArtFile;
-			   	   		for(int i = 0; i< fileList.length; i++){
-			   	   			albumArtFile = new File(albumArtDir.getAbsolutePath()+"/"+fileList[i]);
-			   	   			albumArtFile.delete();
+    public void handleNewVersionBoot(){   		
+    		/*
+    		 * For older versions (<=2)
+    		 */
+	   		if((new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).getLong("Version", 0) <= 2){
+		   		/*
+		   		 * Clear previous Album Art
+		   		 */
+		   		Builder aD = new AlertDialog.Builder(context);
+		   		aD.setTitle("New Version");
+		   		aD.setMessage("The new version of RockOn supports album art download from higher quality sources. Do you want to download art now? " +
+		   				"Every 10 albums will take aproximately 1 minute to download. " +
+		   				"(You can always do this later by choosing the 'Get Art' menu option)");
+		   		aD.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+		
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+			   	   		//(new RockOnPreferenceManager(FILEX_PREFERENCES_PATH)).putLong("artImportDate", 0);
+			   	   		try{
+				   	   		File albumArtDir = new File(FILEX_ALBUM_ART_PATH);
+				   	   		String[] fileList = albumArtDir.list();
+				   	   		File albumArtFile;
+				   	   		for(int i = 0; i< fileList.length; i++){
+				   	   			albumArtFile = new File(albumArtDir.getAbsolutePath()+"/"+fileList[i]);
+				   	   			albumArtFile.delete();
+				   	   		}
+				   	   		checkAlbumArtDirectory();
+				   	   		triggerAlbumArtFetching();
+			   	   		}catch(Exception e){
+			   	   			e.printStackTrace();
 			   	   		}
-			   	   		checkAlbumArtDirectory();
-			   	   		triggerAlbumArtFetching();
-		   	   		}catch(Exception e){
-		   	   			e.printStackTrace();
-		   	   		}
-				}
-	   			
-	   		});
-
-	   		aD.setNegativeButton("No", new DialogInterface.OnClickListener(){
-
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-				
-				}
-	   			
-	   		});
-
-	   		aD.show();
+					}
+		   			
+		   		});
+	
+		   		aD.setNegativeButton("No", new DialogInterface.OnClickListener(){
+	
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+					
+					}
+		   			
+		   		});
+	
+		   		aD.show();
+		   		
+		   		/*
+		   		 * Version 2 specific default preference changes
+		   		 */
+		   		// version 2 specific
+	//	   	   	if(albumCursor.getCount() > 10000)
+		   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, false);
+	//	   	   	else
+	//	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
+		   		
+		   		readPreferences();
+	//	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
+	//	   		albumAdapter.showFrame = showFrame;
+				//
+		   		
+		   		/*
+		   		 * Show help screen
+		   		 */
+		   		this.hideMainUI();
+		   		this.showHelpUI();
+	   		} else if((new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).getLong("Version", 0) == 3){
+		   		/*
+		   		 * Force a albumcover update
+		   		 */
+		   		Builder aD = new AlertDialog.Builder(context);
+		   		aD.setTitle(R.string.version_4_title);
+		   		aD.setMessage(R.string.version_4_update_info);
+		   		aD.setPositiveButton("Yes", new DialogInterface.OnClickListener(){
+		
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+			   	   		try{
+				   	   		checkAlbumArtDirectory();
+				   	   		triggerAlbumArtFetching();
+			   	   		}catch(Exception e){
+			   	   			e.printStackTrace();
+			   	   		}
+					}
+		   			
+		   		});
+	
+		   		aD.setNegativeButton("No", new DialogInterface.OnClickListener(){
+	
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+					
+					}
+		   			
+		   		});
+	
+		   		aD.show();	   			
+	   		}
 	   		
-	   		/*
-	   		 * Version 2 specific default preference changes
-	   		 */
-	   		// version 2 specific
-//	   	   	if(albumCursor.getCount() > 10000)
-	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, false);
-//	   	   	else
-//	   	   		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putBoolean(PREFS_SHOW_ART_WHILE_SCROLLING, true);
-	   		
-	   		readPreferences();
-//	   		albumAdapter.showArtWhileScrolling = showArtWhileScrolling;
-//	   		albumAdapter.showFrame = showFrame;
-			//
-	   		
-	   		/*
-	   		 * Show help screen
-	   		 */
-	   		this.hideMainUI();
-	   		this.showHelpUI();
+    		(new RockOnPreferenceManager(this.FILEX_PREFERENCES_PATH)).putLong("Version", VERSION);
     }
       
     /*******************************************
@@ -1069,7 +1104,7 @@ public class Filex extends Activity {
 	    				/*
 	    				 * Reload Navigator List
 	    				 */
-	    				recycleNavigatorList();
+//	    				recycleNavigatorList();
 	    				albumAdapter = null;
 	    				getAlbums(true);
 	    			}
@@ -2011,16 +2046,16 @@ public class Filex extends Activity {
 														);
 			this.albumNavigatorScrollListener.onScrollStateChanged(this.albumNavigatorList, OnScrollListener.SCROLL_STATE_IDLE);
 			
-			/*
-			 * Refresh Visible List
-			 */
-			this.refreshVisibleList(albumNavigatorList);
-			/*
-			 * Load Cache if not loaded
-			 */
-			if(this.albumImages == null){
-				this.imageCachingLaunchThread(albumCursorPositionPlaying);
-			}
+//			/*
+//			 * Refresh Visible List
+//			 */
+//			this.refreshVisibleList(albumNavigatorList);
+//			/*
+//			 * Load Cache if not loaded
+//			 */
+//			if(this.albumImages == null){
+//				this.imageCachingLaunchThread(albumCursorPositionPlaying);
+//			}
 
     	} catch (Exception e) {
     		e.printStackTrace();
@@ -2051,13 +2086,13 @@ public class Filex extends Activity {
 		
 		Log.i("STARTUP10-3", System.currentTimeMillis() - logTime + "msec");
         
-		/*
-		 * Allocate Cache if needed
-		 */
-		if(albumImages == null || force){
-			albumImages = new Bitmap[MAX_IMAGES_IN_CACHE+1];
-			albumImagesIndexes = new int[MAX_IMAGES_IN_CACHE+1];
-		}
+//		/*
+//		 * Allocate Cache if needed
+//		 */
+//		if(albumImages == null || force){
+//			albumImages = new Bitmap[MAX_IMAGES_IN_CACHE+1];
+//			albumImagesIndexes = new int[MAX_IMAGES_IN_CACHE+1];
+//		}
 		
 		Log.i("STARTUP10-4", System.currentTimeMillis() - logTime + "msec");
 		
@@ -2073,11 +2108,12 @@ public class Filex extends Activity {
 					fieldsFrom,
 					fieldsTo,
 					initializeNewAlbumCursor(),
-					albumImages,
-					albumImagesIndexes,
 					showArtWhileScrolling,
-					showFrame,
-					MAX_IMAGES_IN_CACHE);
+					showFrame);
+//					albumImages,
+//					albumImagesIndexes,
+					
+//					MAX_IMAGES_IN_CACHE);
 		} else {
 			albumAdapter.context = this.getApplicationContext();
 			albumAdapter.reloadNavigatorWidth();
@@ -2155,21 +2191,18 @@ public class Filex extends Activity {
 							Log.i("STARTUP10-666", System.currentTimeMillis() - logTime + "msec");
 						       
 							
-							/* refresh the views in case the cache does not have this area */
-							albumAdapter.albumImagesCenter = currentAlbumPosition;
-							for(int i = 0; i < Math.min(6, HALF_IMAGES_IN_CACHE-1) ; i++){
-									albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
-											currentAlbumPosition + i, 
-											BITMAP_SIZE_SMALL);
-									albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = currentAlbumPosition + i;
-							}
+//							/* refresh the views in case the cache does not have this area */
+//							albumAdapter.albumImagesCenter = currentAlbumPosition;
+//							for(int i = 0; i < Math.min(6, HALF_IMAGES_IN_CACHE-1) ; i++){
+//									albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
+//											currentAlbumPosition + i, 
+//											BITMAP_SIZE_SMALL);
+//									albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = currentAlbumPosition + i;
+//							}
 							
 							Log.i("STARTUP10-667", System.currentTimeMillis() - logTime + "msec");
 						    
 							
-							////////// refreshVisibleList(albumNavigatorList); // in case the bitmaps of this area are not cached
-							////////// STILL MISSING
-							////////// SHOULD SET UP THE RELEVANT CACHE MANUALLY
 							/* animate appearance */
 							TranslateAnimation tAnim = new TranslateAnimation(200.f, 0.f, 0.f, 0.f);
 							tAnim.setDuration(250);
@@ -2185,176 +2218,176 @@ public class Filex extends Activity {
 				}, 
 				250);
 		
-		(new Handler()).postDelayed(
-				new Runnable(){
-					@Override
-					public void run() {
-						try{
-							imageCachingLaunchThread(albumNavigatorList.getFirstVisiblePosition());
-						} catch(Exception e){
-							e.printStackTrace();
-						}
-					}
-				}, 
-				2000);
-		
+//		(new Handler()).postDelayed(
+//				new Runnable(){
+//					@Override
+//					public void run() {
+//						try{
+//							imageCachingLaunchThread(albumNavigatorList.getFirstVisiblePosition());
+//						} catch(Exception e){
+//							e.printStackTrace();
+//						}
+//					}
+//				}, 
+//				2000);
+//		
 		Log.i("STARTUP10-8", System.currentTimeMillis() - logTime + "msec");		
         
     }
     
-    /*
-     * Image Caching Handler
-     */
-    public Handler cacheImageHandler = new Handler(){
-    	@Override
-    	public void handleMessage(Message msg){
-    		
-    	}
-    };
+//    /*
+//     * Image Caching Handler
+//     */
+//    public Handler cacheImageHandler = new Handler(){
+//    	@Override
+//    	public void handleMessage(Message msg){
+//    		
+//    	}
+//    };
     
-    /*
-     * Image Caching Thread
-     */
-    Thread imageCachingThread = null;
-    public void imageCachingLaunchThread(int center){
-    	final int centerVar = center;
-    	imageCachingThread = new Thread(){
-    		@Override
-    		public void run(){
-        		albumAdapter.albumImagesCenter = centerVar;
-        		cacheImages(centerVar);
-    		}
-    	};
-    	imageCachingThread.setPriority(Thread.MIN_PRIORITY);
-    	imageCachingThread.start();
-    }
+//    /*
+//     * Image Caching Thread
+//     */
+//    Thread imageCachingThread = null;
+//    public void imageCachingLaunchThread(int center){
+//    	final int centerVar = center;
+//    	imageCachingThread = new Thread(){
+//    		@Override
+//    		public void run(){
+//        		albumAdapter.albumImagesCenter = centerVar;
+//        		cacheImages(centerVar);
+//    		}
+//    	};
+//    	imageCachingThread.setPriority(Thread.MIN_PRIORITY);
+//    	imageCachingThread.start();
+//    }
     
-    /*
-     * Some caching global variables
-     */
-    static Bitmap[] albumImages = null;
-    static int[]	albumImagesIndexes = null;
-    final  int		MAX_IMAGES_IN_CACHE = 0;
-    final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
-    
-    /*
-     * Image Caching
-     */
-    int windowMax;
-    int windowMin;
-    public void cacheImages(int center){
-    	windowMax = center + HALF_IMAGES_IN_CACHE;
-    	windowMin = center - HALF_IMAGES_IN_CACHE;
-    	
-    	/* 
-    	 * re-utilize what you can 
-    	 */
-    	try{
-	    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
-	    		/*
-	    		 * Check if Album List started to scroll
-	    		 */
-	    		if(albumListIsScrolling || albumTransitionIsRunning)
-	    			return;
-	    		
-//	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
-	    		
-	    		/* Negative */
-	    		if(center - i > 0 &&
-	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMax &&
-	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMin){
-	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE - i];
-	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE - i];
-	    			
-	    		}
-	    		
-//	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + "(center is " + center +")"); 
-	    	
-	    		/*
-	    		 * Check if List started to scroll
-	    		 */
-	    		if(albumListIsScrolling || albumTransitionIsRunning)
-	    			return;
-	    		
-	    		
-	    		/* Positive */
-	    		if(i != 0 &&
-	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMax &&
-	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMin){
-	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE + i];
-	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE + i];
-	    			
-	    		}
-	    	}
-    	} catch(Exception e){
-    		e.printStackTrace();
-    	}
-    	
-    	/*
-    	 *  Go get what is missing 
-    	 */
-    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){		
-    		/*
-    		 * Check if List started to scroll
-    		 */
-    		if(albumListIsScrolling || albumTransitionIsRunning)
-    			break;
-    		
-    		/* Negative */
-    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
-    				center - i > 0){
-
-//    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
-    			
-    			/* release image from memory*/    			
-    			if(albumImages[HALF_IMAGES_IN_CACHE - i] != null && 
-    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMax &&
-    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMin){
-        			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = -1; // avoids someone trying to use the recycled bitmap
-    				albumImages[HALF_IMAGES_IN_CACHE - i].recycle();
-    			}
-    			
-    			/* cache new image */
-    			albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
-									center - i, 
-									albumAdapter.BITMAP_SIZE_SMALL);
-				
-    			/* update image index */
-    			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
-    		}
-    		
-    		/*
-    		 * Check if List started to scroll
-    		 */
-    		if(albumListIsScrolling || albumTransitionIsRunning)
-    			break;
-    		
-    		/* Positive */
-    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
-    				i != 0){
-    			
-//    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
-    			
-    			/* release image from memory*/    			
-    			if(albumImages[HALF_IMAGES_IN_CACHE + i] != null && 
-    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMax &&
-    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMin){
-        			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = -1; // avoids someone trying to use the recycled bitmap
-    				albumImages[HALF_IMAGES_IN_CACHE + i].recycle();
-    			}
-    			/* cache new image */
-    			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
-									center + i, 
-									albumAdapter.BITMAP_SIZE_SMALL);
-    			
-    			/* update image index */
-    			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
-    		}
-    	}
-    	
-    	Log.i("CACHE", "Stopped Caching");
-
-    }
+//    /*
+//     * Some caching global variables
+//     */
+//    static Bitmap[] albumImages = null;
+//    static int[]	albumImagesIndexes = null;
+//    final  int		MAX_IMAGES_IN_CACHE = 0;
+//    final  int		HALF_IMAGES_IN_CACHE = MAX_IMAGES_IN_CACHE / 2;
+//    
+//    /*
+//     * Image Caching
+//     */
+//    int windowMax;
+//    int windowMin;
+//    public void cacheImages(int center){
+//    	windowMax = center + HALF_IMAGES_IN_CACHE;
+//    	windowMin = center - HALF_IMAGES_IN_CACHE;
+//    	
+//    	/* 
+//    	 * re-utilize what you can 
+//    	 */
+//    	try{
+//	    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){
+//	    		/*
+//	    		 * Check if Album List started to scroll
+//	    		 */
+//	    		if(albumListIsScrolling || albumTransitionIsRunning)
+//	    			return;
+//	    		
+////	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + "(center is " + center +")" + " € [" + windowMin + "," + windowMax + "]"); 
+//	    		
+//	    		/* Negative */
+//	    		if(center - i > 0 &&
+//	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMax &&
+//	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMin){
+//	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE - i];
+//	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE - i];
+//	    			
+//	    		}
+//	    		
+////	    		Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " - " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + "(center is " + center +")"); 
+//	    	
+//	    		/*
+//	    		 * Check if List started to scroll
+//	    		 */
+//	    		if(albumListIsScrolling || albumTransitionIsRunning)
+//	    			return;
+//	    		
+//	    		
+//	    		/* Positive */
+//	    		if(i != 0 &&
+//	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMax &&
+//	    				albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMin){
+//	    			albumImages[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImages[HALF_IMAGES_IN_CACHE + i];
+//	    			albumImagesIndexes[albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] - center + HALF_IMAGES_IN_CACHE] = albumImagesIndexes[HALF_IMAGES_IN_CACHE + i];
+//	    			
+//	    		}
+//	    	}
+//    	} catch(Exception e){
+//    		e.printStackTrace();
+//    	}
+//    	
+//    	/*
+//    	 *  Go get what is missing 
+//    	 */
+//    	for (int i = 0; i < HALF_IMAGES_IN_CACHE; i++){		
+//    		/*
+//    		 * Check if List started to scroll
+//    		 */
+//    		if(albumListIsScrolling || albumTransitionIsRunning)
+//    			break;
+//    		
+//    		/* Negative */
+//    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] != center - i &&
+//    				center - i > 0){
+//
+////    			Log.i("DBG", (HALF_IMAGES_IN_CACHE - i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] + " == " + (center -i));
+//    			
+//    			/* release image from memory*/    			
+//    			if(albumImages[HALF_IMAGES_IN_CACHE - i] != null && 
+//    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] > windowMax &&
+//    					albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] < windowMin){
+//        			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = -1; // avoids someone trying to use the recycled bitmap
+//    				albumImages[HALF_IMAGES_IN_CACHE - i].recycle();
+//    			}
+//    			
+//    			/* cache new image */
+//    			albumImages[HALF_IMAGES_IN_CACHE - i] = albumAdapter.getAlbumBitmap(
+//									center - i, 
+//									albumAdapter.BITMAP_SIZE_SMALL);
+//				
+//    			/* update image index */
+//    			albumImagesIndexes[HALF_IMAGES_IN_CACHE - i] = center - i;
+//    		}
+//    		
+//    		/*
+//    		 * Check if List started to scroll
+//    		 */
+//    		if(albumListIsScrolling || albumTransitionIsRunning)
+//    			break;
+//    		
+//    		/* Positive */
+//    		if(albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] != center + i &&
+//    				i != 0){
+//    			
+////    			Log.i("DBG", (HALF_IMAGES_IN_CACHE + i) + " ||||| " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] + " == " + (center + i));
+//    			
+//    			/* release image from memory*/    			
+//    			if(albumImages[HALF_IMAGES_IN_CACHE + i] != null && 
+//    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] > windowMax &&
+//    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] < windowMin){
+//        			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = -1; // avoids someone trying to use the recycled bitmap
+//    				albumImages[HALF_IMAGES_IN_CACHE + i].recycle();
+//    			}
+//    			/* cache new image */
+//    			albumImages[HALF_IMAGES_IN_CACHE + i] = albumAdapter.getAlbumBitmap(
+//									center + i, 
+//									albumAdapter.BITMAP_SIZE_SMALL);
+//    			
+//    			/* update image index */
+//    			albumImagesIndexes[HALF_IMAGES_IN_CACHE + i] = center + i;
+//    		}
+//    	}
+//    	
+//    	Log.i("CACHE", "Stopped Caching");
+//
+//    }
     
     /*
      * Cursor Initialization (convenience method)
@@ -2874,11 +2907,11 @@ public class Filex extends Activity {
 						albumCursor.getString(albumCursor.getColumnIndexOrThrow(MediaStore.Audio.Albums.ALBUM)),
 						true);
 				
-				/*
-				 * reload preloaded images
-				 */
-				albumAdapter.albumImages[albumNavigatorItemLongClickIndex] = 
-					albumAdapter.getAlbumBitmap(albumNavigatorItemLongClickIndex, BITMAP_SIZE_SMALL);
+//				/*
+//				 * reload preloaded images
+//				 */
+//				albumAdapter.albumImages[albumNavigatorItemLongClickIndex] = 
+//					albumAdapter.getAlbumBitmap(albumNavigatorItemLongClickIndex, BITMAP_SIZE_SMALL);
 			}catch(Exception e){
 				e.printStackTrace();
 			}
@@ -3517,7 +3550,7 @@ public class Filex extends Activity {
 				/*
 				 * Reload Navigator List
 				 */
-				recycleNavigatorList();
+//				recycleNavigatorList();
 				albumAdapter = null;
 				getAlbums(true);
 	
@@ -3687,11 +3720,11 @@ public class Filex extends Activity {
 					albumAdapter.isScrolling = false;
 				albumListIsScrolling = false;
 
-				Log.i("SCROLLIDLE", "Will start CACHING for center " + view.getFirstVisiblePosition());
-				/*
-				 * Cache new images in range
-				 */
-				imageCachingLaunchThread(view.getFirstVisiblePosition());
+//				Log.i("SCROLLIDLE", "Will start CACHING for center " + view.getFirstVisiblePosition());
+//				/*
+//				 * Cache new images in range
+//				 */
+//				imageCachingLaunchThread(view.getFirstVisiblePosition());
 				
 //				// try to generate another garbage collection
 //				for(int i=0; i<1; i++){
@@ -6548,21 +6581,21 @@ public class Filex extends Activity {
 		this.eventListRadiusMetric.setVisibility(View.VISIBLE);	
 	}
 	
-	public void recycleNavigatorList(){
-    	/*
-    	 * Navigator Album Art
-    	 */
-    	try{
-			for(int i = 0; i < this.albumAdapter.albumImages.length; i++){
-	    		if(this.albumAdapter.albumImages[i] != null){
-	    			this.albumAdapter.albumImages[i].recycle();
-	    			this.albumAdapter.albumImages[i] = null;
-	    		}
-	    	}
-    	} catch (Exception e) {
-    		e.printStackTrace();
-    	}
-	}
+//	public void recycleNavigatorList(){
+//    	/*
+//    	 * Navigator Album Art
+//    	 */
+//    	try{
+//			for(int i = 0; i < this.albumAdapter.albumImages.length; i++){
+//	    		if(this.albumAdapter.albumImages[i] != null){
+//	    			this.albumAdapter.albumImages[i].recycle();
+//	    			this.albumAdapter.albumImages[i] = null;
+//	    		}
+//	    	}
+//    	} catch (Exception e) {
+//    		e.printStackTrace();
+//    	}
+//	}
 	
 	public void cleanUpGlobals(){
 		ALBUM_COLS = null;

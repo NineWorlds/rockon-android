@@ -1,9 +1,12 @@
 package org.abrantes.filex;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -77,9 +80,6 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	public String 				path = null;
 	public File 				albumCoverFilePath = null;
 	public Options 				opts = null;
-	public Bitmap[] 			albumImages;
-	public int[] 				albumImagesIndexes;
-	public int					albumImagesCenter = 0;
 	public Bitmap				albumUndefinedCoverBitmap;
 	public Bitmap				albumUndefinedCoverBigBitmap;
 	public	boolean				PRELOAD = false;
@@ -88,7 +88,15 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	public boolean				showArtWhileScrolling = false;
 	public boolean				showFrame = false;
 
-	private int					HALF_IMAGES_IN_CACHE;
+	/* Optimizations for list scroll */
+	byte[] 						colorComponent = new byte[4*120*120];
+	public Bitmap[]				visibleCoversBitmap = new Bitmap[7];
+	public Bitmap				tmpCoverBitmap = Bitmap.createBitmap(120, 120, Bitmap.Config.RGB_565);
+	int							visibleCoverIndex = 0;
+	              //bmTest = Bitmap.createBitmap(120, 120, Bitmap.Config.RGB_565);
+	
+//	/* Caching variables */
+//	private int					HALF_IMAGES_IN_CACHE;
 	
 
     public AlbumCursorAdapter(Context context, 
@@ -97,24 +105,28 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     							String[] from,
     							int[] to,
     							Cursor cSecondary,
-    							Bitmap[] albumImages,
-    							int[] albumImagesIndexes,
     							boolean showArtWhileScrolling,
-    							boolean showFrame,
-    							int	imagesInCache){
+    							boolean showFrame){
         super(context, layout, c, from, to);
         this.cursor = c;
         this.cursorSecondary = cSecondary;
         this.context = context;
         this.showArtWhileScrolling = showArtWhileScrolling;
         this.showFrame = showFrame;
-        this.HALF_IMAGES_IN_CACHE = imagesInCache/2;
 
         /*
          * Reload navigator width
          */
         reloadNavigatorWidth();
-                
+        
+        /*
+         * allocate visible cover bitmaps
+         */
+        for(int i=0; i<visibleCoversBitmap.length; i++){
+        	visibleCoversBitmap[i] = Bitmap.createBitmap(120, 120, Bitmap.Config.ARGB_8888);
+        	visibleCoverIndex = 0;
+        }
+        
         /*
          * Preload the undefined album image
          */
@@ -124,8 +136,10 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 		opts.inSampleSize = NO_COVER_SAMPLING_INTERVAL;
 		albumUndefinedCoverBitmap = this.createFancyAlbumCoverFromResource(
 				R.drawable.albumart_mp_unknown,
-				viewWidth,
-				viewWidth);
+				120,
+				120);
+//				viewWidth,
+//				viewWidth);
     	
 //		albumUndefinedCoverNormalBitmap = this.createFancyAlbumCoverFromResource(
 //				R.drawable.albumart_mp_unknown,
@@ -140,9 +154,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
     	/*
          * Set up image cache variables
          */
-    	this.albumImages = albumImages; 
-    	this.albumImagesIndexes = albumImagesIndexes;
-    	PRELOAD = true;
+    	PRELOAD = false;
 
         
 
@@ -229,6 +241,9 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	    		albumImageOverlay.setVisibility(View.GONE);
 	    	}
 
+	    	/*
+	    	 * Album and Artist name
+	    	 */
 	    	// TODO: needs a if(albums in full screen)
 	    	albumNameTextView = (TextView)
 	    									view.findViewById(R.id.navigator_albumname);
@@ -238,42 +253,74 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	    	albumArtistTextView.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)));
 	    	
 	    	
-    		/*
-	    	 * if preload is in use, get the preloaded bitmap, otherwise go get it
-	    	 */
-	    	if(PRELOAD){
-	    		if(albumImage != null && cursor != null){
-//		    			Log.i("SHOW", "cursor.getPosition " + cursor.getPosition() + " -- Center " + albumImagesCenter + " -- HALF_CACHESIZE "+ HALF_IMAGES_IN_CACHE);
-//		    			Log.i("SHOW", "Cached Idx: " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] +
-//		    					" == CursorPosition: " + cursor.getPosition());
-	    			if(Math.abs(cursor.getPosition()-albumImagesCenter) < HALF_IMAGES_IN_CACHE && 
-	    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] == cursor.getPosition()){
-//		    				Log.i("SHOW", "Cached Cover");
-	    				albumImage.setImageBitmap(albumImages[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter]);
-	    				/* Hide Artist Name */
-	    		    	albumImageAlternative = (TextView)
-				    		view.findViewById(R.id.navigator_albumart_alternative);
-				    	albumImageAlternative.setVisibility(View.GONE);
-	    			}
-	    			else{
-//		    				Log.i("SHOW", "Uncached cover");
-	    				albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_SMALL));
-//		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
-//		    				/* Show Artist Name */
-//		    				if(!cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)).equals("<unknown>")){
-//			    		    	albumImageAlternative = (TextView)
-//						    		view.findViewById(R.id.navigator_albumart_alternative);
-//						    	albumImageAlternative.setLayoutParams(params);
-//						    	albumImageAlternative.setVisibility(View.VISIBLE);
-//						    	albumImageAlternative.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)));
-//		    				}
-	    			}
-	    		}
-	    		return;
-	    	} else {
-	    		albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_SMALL));
-	    		return;
-	    	}
+	    	/*
+			 * Create bitmap from file with pixel info
+			 */
+			// read file
+			if(fillSmallBitmap(tmpCoverBitmap, cursor.getPosition())){
+    			// rounded corners
+    			createFancyAlbumCoverWithoutAllocation(
+    					tmpCoverBitmap, 
+    					visibleCoversBitmap[visibleCoverIndex], 
+    					120, 
+    					120);
+			} else {
+				// rounded corners but unknown image
+    			createFancyAlbumCoverWithoutAllocation(
+    					albumUndefinedCoverBitmap, 
+    					visibleCoversBitmap[visibleCoverIndex], 
+    					120, 
+    					120);
+			}
+    		// apply image
+			albumImage.setImageBitmap(visibleCoversBitmap[visibleCoverIndex]);
+			/*
+			 * Manage the set of internal bitmaps
+			 */
+			if(visibleCoverIndex >= visibleCoversBitmap.length - 1)
+				visibleCoverIndex = 0;
+			else
+				visibleCoverIndex++;
+			
+	    	return;
+    		
+//	    	/*
+//	    	 * if preload is in use, get the preloaded bitmap, otherwise go get it
+//	    	 */
+//	    	if(PRELOAD){
+//	    		if(albumImage != null && cursor != null){
+////		    			Log.i("SHOW", "cursor.getPosition " + cursor.getPosition() + " -- Center " + albumImagesCenter + " -- HALF_CACHESIZE "+ HALF_IMAGES_IN_CACHE);
+////		    			Log.i("SHOW", "Cached Idx: " + albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] +
+////		    					" == CursorPosition: " + cursor.getPosition());
+////	    			if(Math.abs(cursor.getPosition()-albumImagesCenter) < HALF_IMAGES_IN_CACHE && 
+////	    					albumImagesIndexes[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter] == cursor.getPosition()){
+//////		    				Log.i("SHOW", "Cached Cover");
+////	    				albumImage.setImageBitmap(albumImages[HALF_IMAGES_IN_CACHE + cursor.getPosition() - albumImagesCenter]);
+////	    				/* Hide Artist Name */
+////	    		    	albumImageAlternative = (TextView)
+////				    		view.findViewById(R.id.navigator_albumart_alternative);
+////				    	albumImageAlternative.setVisibility(View.GONE);
+////	    			}
+////	    			else{
+//////		    				Log.i("SHOW", "Uncached cover");
+////	    				albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_SMALL));
+//////		    				albumImage.setImageBitmap(albumUndefinedCoverBitmap);
+//////		    				/* Show Artist Name */
+//////		    				if(!cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)).equals("<unknown>")){
+//////			    		    	albumImageAlternative = (TextView)
+//////						    		view.findViewById(R.id.navigator_albumart_alternative);
+//////						    	albumImageAlternative.setLayoutParams(params);
+//////						    	albumImageAlternative.setVisibility(View.VISIBLE);
+//////						    	albumImageAlternative.setText(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Albums.ARTIST)));
+//////		    				}
+////	    			}
+//	    			
+//	    		}
+//	    		return;
+//	    	} else {
+//	    		albumImage.setImageBitmap(getAlbumBitmap(cursor.getPosition(), BITMAP_SIZE_SMALL));
+//	    		return;
+//	    	}
 		} catch(Exception e) {
     		e.printStackTrace();
     		albumImage.setImageBitmap(albumUndefinedCoverBitmap);
@@ -329,6 +376,72 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 		}
     }
     
+    /**
+     * fillBitmap
+     * @param bmTest
+     * @param position
+     */
+	boolean fillSmallBitmap(Bitmap bmTest, int position){ // assumes that a 120x120 bitmap is passed
+    	/*
+    	 * Sanity check
+    	 */
+		if(position == -1 || position >= cursor.getCount() || 
+				bmTest.getWidth() != 120 || bmTest.getHeight() != 120){
+    		return false;
+    	}
+    	
+		/*
+		 * move cursor 
+		 */
+    	cursorSecondary.moveToPosition(position);
+    		
+    	/*
+    	 * Get the path to the album art
+    	 */
+    	albumCoverPath = null;
+		artistName = cursorSecondary.getString(
+						cursorSecondary.getColumnIndexOrThrow(
+										MediaStore.Audio.Albums.ARTIST));
+		albumName = cursorSecondary.getString(
+						cursorSecondary.getColumnIndexOrThrow(
+										MediaStore.Audio.Albums.ALBUM));
+		path = FILEX_SMALL_ALBUM_ART_PATH+
+				validateFileName(artistName)+
+				" - "+
+				validateFileName(albumName)+
+				".bmp";
+		
+		/*
+		 * Access the file
+		 */
+		albumCoverFilePath = new File(path);
+		if(albumCoverFilePath.exists() && albumCoverFilePath.length() > 0){
+			albumCoverPath = path;
+		} else {
+			return false;
+		}
+		/*
+		 * Read File and fill bitmap
+		 */
+		try {
+			FileInputStream albumCoverFileInputStream = new FileInputStream(albumCoverFilePath);
+			double startTime = System.currentTimeMillis();
+			int iOffset = 0;
+			albumCoverFileInputStream.read(colorComponent, 0, colorComponent.length);
+//			Log.i("-CREATEDBITMAP", ""+(System.currentTimeMillis() - startTime));
+			bmTest.copyPixelsFromBuffer(ByteBuffer.wrap(colorComponent));
+//			Log.i("CREATEDBITMAP", ""+(System.currentTimeMillis() - startTime));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+
+    
     /*********************************
      * 
      * getAlbumBitmap
@@ -352,7 +465,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 		albumName = cursorSecondary.getString(
 						cursorSecondary.getColumnIndexOrThrow(
 										MediaStore.Audio.Albums.ALBUM));
-		if(bitmapFuzzySize == BITMAP_SIZE_SMALL){
+		if(bitmapFuzzySize == BITMAP_SIZE_SMALL || bitmapFuzzySize == BITMAP_SIZE_XSMALL){
 			path = FILEX_SMALL_ALBUM_ART_PATH+
 				validateFileName(artistName)+
 				" - "+
@@ -453,13 +566,70 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 				return albumUndefinedCoverBigBitmap;
 		}
     }
+
     
     
-    Shader shader;
+    Shader	shader;
+    Canvas	canvas = new Canvas();
     RectF	rect = new RectF();
     Paint	paint= new Paint();
     float	round = 0.f;
 
+    
+    public void createFancyAlbumCoverWithoutAllocation(Bitmap srcBitmap, Bitmap dstBitmap, int width, int height){
+
+    	try{
+    		/*
+    		 * Adjust the aspect ratio of the incoming bitmap if needed
+    		 */
+    		//TODO:
+
+    		/*
+    		 * Adjust the paint
+    		 */
+	    	paint.setAntiAlias(true);
+	    	paint.setDither(true);
+	    	paint.setXfermode(null);
+	        //BlurMaskFilter blurFilter = new BlurMaskFilter(viewWidth/20.0f, BlurMaskFilter.Blur.INNER);
+	    	
+	    	/*
+	    	 * Set the canvas to draw on the dst bitmap
+	    	 */
+	        canvas.setBitmap(dstBitmap); 
+	        
+	        /*
+	         * Set the paint bitmap shader
+	         */
+	        if(srcBitmap != null){
+		        Shader bmpShader = new BitmapShader(
+		        		srcBitmap,
+		        		TileMode.CLAMP,
+		        		TileMode.CLAMP);
+		        paint.setShader(bmpShader);
+	        }
+
+	        /*
+	         * Cover shape (round rect)
+	         */
+	        rect.left = 1.0f;
+	        rect.top = 1.0f;
+	        rect.right = width - 1.0f;
+	        rect.bottom = height - 1.0f;
+	        if(width > 300)
+	        	round = 0.f; // fullscreen
+	        else{
+	        	// other sizes
+	        	if(showFrame)
+	        		round = width/40.f;
+	        	else
+	        		round = width/30.f;
+	        }
+	       canvas.drawRoundRect(rect, round, round, paint);
+    	} catch(Exception e){
+    		// some error
+    		return;
+    	}
+    }
     
     /*********************************
      * 
@@ -553,6 +723,7 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	        	canvas.drawRoundRect(rect, round, round, paint);
 	        }
 	        
+	        return cBitmap;
 	
 	        
 	//        int[] gradColors = {0x44222222, 0x44EEEEEE, 0x44FFFFFF};
@@ -601,7 +772,6 @@ public class AlbumCursorAdapter extends SimpleCursorAdapter{
 	//        		width, height, false);
 	//        canvas.drawBitmap(tBitmap, 0, 0, paint);
     	
-	        return cBitmap;
     	} catch (Exception e) {
     		e.printStackTrace();
     		return albumUndefinedCoverBitmap;

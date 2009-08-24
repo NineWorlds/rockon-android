@@ -13,6 +13,8 @@ import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.Buffer;
+import java.nio.ByteBuffer;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -1047,13 +1049,21 @@ public class LastFmAlbumArtImporter{
 			return;
 		}
 					
-	    
+	    /*
+	     * Save Small Bitmap in a file
+	     */
 		try {
+			/*
+			 * Create File
+			 */
 			if(smallAlbumArtFile != null)
 				smallAlbumArtFile.createNewFile();
 			else
 				Log.i("DBG", "smallAlbumArtFile is null ?????");
 			
+			/*
+			 * Get an output stream to the file
+			 */
 		    FileOutputStream smallAlbumArtFileStream = null;
 		    
 		    if(smallAlbumArtFile != null)
@@ -1061,25 +1071,119 @@ public class LastFmAlbumArtImporter{
 		    else
 		    	Log.i("DBG", "smallAlbumArtFile is null ?????");
 		    
+		    /*
+		     * Save the bitmap to the new file
+		     */
 		    if(smallBitmap != null && smallAlbumArtFileStream != null)
 		    	smallBitmap.compress(Bitmap.CompressFormat.JPEG, 90, smallAlbumArtFileStream);
 		    else
 		    	Log.i("DBG", "smallBitmap or smallAlbumArtFileStream is null ?????");
 		    
+		    /*
+		     * Close stream and recycle bitmap
+		     */
 		    if(smallAlbumArtFileStream != null)
 		    	smallAlbumArtFileStream.close();
 		    else
 		    	Log.i("DBG", "smallAlbumArtFileStream is null ?????");
-		 
-		    if(smallBitmap != null)
-		    	smallBitmap.recycle();
 		    
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (NullPointerException e) {
 			e.printStackTrace();
 		}
+		
+		
+		/*
+		 * Save the Bitmap bytes in a file
+		 */
+		try {
+			/*
+			 * Output File
+			 */
+			String smallArtFileNameBmExt = ((Filex)context).FILEX_SMALL_ALBUM_ART_PATH+
+				validateFileName(artistName)+
+				" - "+
+				validateFileName(albumName)+
+				FILEX_FILENAME_EXTENSION+
+				".bmp";
+			Log.i("CREATE", smallArtFileName);
+			File smallAlbumArtFileBmExt = new File(smallArtFileNameBmExt);
+			if(!force && smallAlbumArtFileBmExt.exists() && smallAlbumArtFileBmExt.length() > 0){
+				return;
+			}
+			
+			/*
+			 * Create File
+			 */
+			if(smallAlbumArtFileBmExt != null)
+				smallAlbumArtFileBmExt.createNewFile();
+			else
+				Log.i("DBG", "smallAlbumArtFile is null ?????");
+			
+			/*
+			 * Get an output stream to the file
+			 */
+		    FileOutputStream smallAlbumArtFileStreamBmExt = null;
+		    
+		    if(smallAlbumArtFileBmExt != null)
+		    	smallAlbumArtFileStreamBmExt = new FileOutputStream(smallAlbumArtFileBmExt);
+		    else
+		    	Log.i("DBG", "smallAlbumArtFile is null ?????");
+		    
+		    /*
+		     * Save the bitmap to the new file
+		     */
+		    if(smallBitmap != null && smallAlbumArtFileStreamBmExt != null){
+		    	Log.i("DBG", "rowBytes: "+smallBitmap.getRowBytes()+" height: " + smallBitmap.getHeight());
+			    ByteBuffer bitmapBuffer = ByteBuffer.allocate(smallBitmap.getRowBytes() * smallBitmap.getHeight());
+			    smallBitmap.copyPixelsToBuffer(bitmapBuffer);
+			    smallAlbumArtFileStreamBmExt.write(bitmapBuffer.array());
+//		    	for(int y = 0; y < smallBitmap.getHeight(); y++){
+//		    		for(int x = 0; x < smallBitmap.getWidth(); x++){
+//		    			smallAlbumArtFileStreamBmExt.write(intToByteArray(smallBitmap.getPixel(x, y)));
+//		    		}
+//		    	}
+		    }
+		    else
+		    	Log.i("DBG", "smallBitmap or smallAlbumArtFileStream is null ?????");
+		    
+		    /*
+		     * Close stream and recycle bitmap
+		     */
+		    if(smallAlbumArtFileStreamBmExt != null)
+		    	smallAlbumArtFileStreamBmExt.close();
+		    else
+		    	Log.i("DBG", "smallAlbumArtFileStream is null ?????");
+		    
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (NullPointerException e) {
+			e.printStackTrace();
+		}
+		
+		/*
+		 * Recucle Bitmap
+		 */
+		if(smallBitmap != null)
+		   	smallBitmap.recycle();
+		 	
+		
 	}
+	
+	/*******************************
+	 * 
+	 * intToByteArray
+	 * 
+	 *******************************/
+	public static final byte[] intToByteArray(int value) {
+        return new byte[] {
+                (byte)(value >>> 24),
+                (byte)(value >>> 16),
+                (byte)(value >>> 8),
+                (byte)value};
+	}
+
 	
 	/*******************************
 	 * 
