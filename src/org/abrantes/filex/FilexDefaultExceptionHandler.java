@@ -36,7 +36,7 @@ import android.util.Log;
 
 			StringBuilder message = new StringBuilder(
 				"Sorry!\n\nRockOn "+
-				"v1.4.5 "+
+				"v1.4.7 "+
 				"crashed! Please send this mail, so that we " +
 				"can analyze/fix the issue.\n");
 			message.append(String.format("-- Android Version: sdk=%s, release=%s, inc=%s\n",

@@ -699,6 +699,12 @@ public class Filex extends Activity {
     	 */
     	if(albumCursor == null)
     		return;
+    	if(albumCursor.getCount() == 0){
+    		showNoMusicDialog();
+    		return;
+    	}
+    		
+    	
     	
     	/* 
     	 * move cursors to the current playing position 
@@ -5723,6 +5729,19 @@ public class Filex extends Activity {
 		fileName = fileName.replace('"', '_');
 		fileName = fileName.replace('|', '_');
 		return fileName;
+	}
+	
+	/********************************
+	 * 
+	 * showNoMusicDialog
+	 * 
+	 ********************************/
+	void showNoMusicDialog(){
+		AlertDialog.Builder aD = new AlertDialog.Builder(this)
+			.setTitle(getResources().getString(R.string.no_music_dialog_title))
+			.setMessage(getResources().getString(R.string.no_music_dialog_message))
+			.setPositiveButton("Ok", null);
+		aD.show();
 	}
 	
 	/********************************

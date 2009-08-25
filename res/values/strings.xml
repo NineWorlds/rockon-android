@@ -35,6 +35,9 @@
 	<string name="sdcard_missing_title">Please insert SD Card</string>
 	<string name="emptyplaylist">No songs queued</string>
 	
+	<string name="no_music_dialog_title">SD Card is empty!</string>
+	<string name="no_music_dialog_message">RockOn did not find any music on your SD Card! Add some music to your SD Card in order to try RockOn.</string> 
+	
 	<array name="album_options">
         <item>Song List</item>
         <item>Change Album Art</item>
